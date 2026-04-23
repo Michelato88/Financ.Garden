@@ -424,12 +424,13 @@
 
 <main>
   <div class="tab-bar">
-    <button class="tab active" onclick="showTab('c1',this)">C1 · Sem amortização</button>
-    <button class="tab" onclick="showTab('c5',this)">C2 · R$ 100k dez/26</button>
-    <button class="tab" onclick="showTab('c6',this)">C3 · R$ 30k/jul × 8 anos</button>
+    <button class="tab active" onclick="showTab('c4',this)">C1 · R$ 50k/jul × 6 + R$ 100k jul/27</button>
+    <button class="tab" onclick="showTab('cnovo',this)">C2 · R$ 300k dez/26</button>
+    <button class="tab" onclick="showTab('c3',this)">C3 · R$ 50k/jul × 6 anos</button>
     <button class="tab" onclick="showTab('c2',this)">C4 · R$ 300k jan/30</button>
-    <button class="tab" onclick="showTab('c3',this)">C5 · R$ 50k/jul × 6 anos</button>
-    <button class="tab" onclick="showTab('c4',this)">C6 · R$ 50k × 6 + R$ 100k jul/27</button>
+    <button class="tab" onclick="showTab('c6',this)">C5 · R$ 30k/jul × 8 anos</button>
+    <button class="tab" onclick="showTab('c5',this)">C6 · R$ 100k dez/26</button>
+    <button class="tab" onclick="showTab('c1',this)">C7 · Sem amortização</button>
   </div>
 
   <div class="legend">
@@ -445,6 +446,7 @@
   <div id="panel-c4" class="panel"></div>
   <div id="panel-c5" class="panel"></div>
   <div id="panel-c6" class="panel"></div>
+  <div id="panel-cnovo" class="panel"></div>
 </main>
 
 <footer>
@@ -534,6 +536,7 @@ extC4.push({ano:2027,mes:7,valor:100000});
 const sc4 = simularAnos(extC4);
 const sc5 = simularAnos([{ano:2026,mes:12,valor:100000}]);
 const sc6 = simularAnos(Array.from({length:8},(_,i)=>({ano:2026+i,mes:7,valor:30000})));
+const sc_novo = simularAnos([{ano:2026,mes:12,valor:300000}]);
 
 function renderTable(rows, panelId, nota) {
   const aq = anoQuit(rows);
@@ -617,6 +620,7 @@ renderTable(sc3,'panel-c3','R$ 50.000 em julho de 2026 a 2031 (6 aportes).');
 renderTable(sc4,'panel-c4','R$ 50.000/jul 2026–2031 + R$ 100.000 extra jul/2027 → R$ 150.000 naquele mês.');
 renderTable(sc5,'panel-c5','Aporte único de R$ 100.000 em dezembro/2026.');
 renderTable(sc6,'panel-c6','R$ 30.000 em julho de 2026 a 2033 (8 aportes · total R$ 240.000).');
+renderTable(sc_novo,'panel-cnovo','Aporte único de R$ 300.000 em dezembro/2026.');
 
 function showTab(id,el){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
