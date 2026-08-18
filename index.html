@@ -549,6 +549,7 @@ const CENARIOS = [
   { id:'c30f', nome:'R$ 30k/jul · todo ano até quitar',     desc:'a partir de 2026, sem parar',                   extras:Array.from({length:40},(_,i)=>({ano:2026+i,mes:7,valor:30000})) },
   { id:'c30b', nome:'R$ 30k em 2027, retoma em 2029',       desc:'pausa em 2026 e 2028 · 30k/jul até quitar',     extras:[{ano:2027,mes:7,valor:30000},...Array.from({length:35},(_,i)=>({ano:2029+i,mes:7,valor:30000}))] },
   { id:'c30p', nome:'R$ 30k/jul a partir de 2029',          desc:'começa em 2029 · sem amort antes disso',         extras:Array.from({length:35},(_,i)=>({ano:2029+i,mes:7,valor:30000})) },
+  { id:'cmix2',nome:'R$ 100k dez/26 + R$ 50k/jul · 5 anos',   desc:'aporte antecipado + recorrência · total R$ 350.000', extras:[{ano:2026,mes:12,valor:100000},...Array.from({length:5},(_,i)=>({ano:2027+i,mes:7,valor:50000}))] },
 ];
 
 // Calcular e ordenar (menor juros = melhor)
