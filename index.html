@@ -3,1528 +3,631 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Painel Financeiro | Condomínio Alpha Garden</title>
-<!--
-==================================================================================
-  PAINEL FINANCEIRO - CONDOMINIO ALPHA GARDEN  v2
-  Para adicionar um mês: copie qualquer bloco dentro de MESES, cole com a chave
-  "ANO-MES" (ex. "2026-05") e preencha os valores da folha. O painel atualiza tudo
-  automaticamente: chips de navegação, deltas, gráficos, saúde e insights.
-  Campos: fundos[saldoAnterior,créditos,débitos], banco{cc,cdb,vipdi,mov?},
-  receitas[[nome,valor]], despesas[[nome,valor]],
-  inadimplencia[[unidade,período,valor,tipo("J","A","")]].
-==================================================================================
--->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<title>Garden · Simulador de Amortização</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+  :root {
+    /* Tech dark palette */
+    --bg: #0a0e0f;
+    --bg-elev: #121819;
+    --bg-elev2: #1a2224;
+    --surface: #161d1f;
+    --border: #233032;
+    --border-soft: #1c2627;
 
-:root{
-  --ink:#1a2420; --paper:#f0ede4; --card:#fff;
-  --pine:#1f4d3a; --pine-soft:#2e6b50; --pine-xsoft:#e8f2ec;
-  --brass:#a5771f; --brass-soft:#c9a24b; --brass-xsoft:#fdf3e0;
-  --sage:#6e8b7a; --sage-light:#dce8e2;
-  --positive:#1e7a4a; --pos-bg:#e6f4ec;
-  --alert:#c0392b; --alert-bg:#fdecea;
-  --warn:#d97706; --warn-bg:#fef3c7;
-  --line:#e0dbd0; --muted:#727d73;
-  --shadow:0 1px 3px rgba(26,36,32,.05),0 6px 24px rgba(26,36,32,.07);
-  --r:14px;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
-body{font-family:'Inter',system-ui,sans-serif;background:var(--paper);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh}
+    --text: #e8f4ef;
+    --text-dim: #8fa6a0;
+    --text-faint: #5a6f6a;
 
-/* ─── MASTHEAD ─── */
-.masthead{background:var(--pine);padding:0 clamp(16px,4vw,48px);border-bottom:3px solid var(--brass);position:sticky;top:0;z-index:100}
-.masthead-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:58px}
-.brand-eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--brass-soft);font-weight:600;margin-bottom:1px}
-.brand-name{font-family:'Fraunces',serif;font-weight:700;font-size:clamp(16px,2.5vw,22px);color:#fff;line-height:1}
+    /* Neon emerald accent */
+    --accent: #00e599;
+    --accent-dim: #00b87a;
+    --accent-glow: rgba(0,229,153,0.18);
+    --accent-soft: rgba(0,229,153,0.08);
 
-/* ─── MONTH NAVIGATOR ─── */
-.month-nav{background:#fff;border-bottom:1px solid var(--line);padding:0 clamp(16px,4vw,48px);overflow-x:auto;scrollbar-width:none}
-.month-nav::-webkit-scrollbar{display:none}
-.month-nav-inner{display:flex;align-items:stretch;gap:0;min-width:max-content;padding:10px 0}
-.year-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;padding:6px 14px 6px 4px;display:flex;align-items:center;white-space:nowrap}
-.year-divider{width:1px;background:var(--line);margin:4px 10px}
-.month-chip{background:none;border:1px solid transparent;border-radius:8px;padding:6px 12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s;line-height:1}
-.month-chip:hover{background:var(--pine-xsoft);color:var(--pine)}
-.month-chip.active{background:var(--pine);color:#fff;border-color:var(--pine)}
+    --cyan: #22d3ee;
+    --amber: #fbbf24;
+    --rose: #fb7185;
+    --violet: #a78bfa;
 
-/* ─── MODAL ─── */
-.modal-overlay{position:fixed;inset:0;background:rgba(26,36,32,.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .18s ease}
-.modal-box{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.2);width:100%;max-width:780px;max-height:88vh;overflow:hidden;display:flex;flex-direction:column}
-.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.modal-title{font-family:'Fraunces',serif;font-size:19px;font-weight:700;color:var(--ink)}
-.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);padding:4px 8px;border-radius:6px;line-height:1;transition:.15s}
-.modal-close:hover{background:var(--line);color:var(--ink)}
-.modal-body{padding:22px 24px;overflow-y:auto}
-.modal-chart-wrap{position:relative;height:260px;margin-bottom:20px}
-.modal-table{width:100%;border-collapse:collapse;font-size:13px}
-.modal-table th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--line);font-weight:700}
-.modal-table th.r,.modal-table td.r{text-align:right}
-.modal-table td{padding:9px 10px;border-bottom:1px solid var(--line)}
-.modal-table td.mono{font-family:'Space Grotesk',monospace;font-weight:600;font-variant-numeric:tabular-nums}
-.modal-table tr.cur td{background:var(--pine-xsoft);font-weight:600}
-.kpi-clickable{cursor:pointer;transition:transform .12s,box-shadow .12s}
-.kpi-clickable:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(31,77,58,.15)}
-.kpi-hint{font-size:10.5px;color:var(--sage);margin-top:6px;display:flex;align-items:center;gap:3px}
-/* 5-col reference KPI grid */
-.g5ref{grid-template-columns:repeat(5,1fr)}
-@media(max-width:1100px){.g5ref{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:700px){.g5ref{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:440px){.g5ref{grid-template-columns:1fr}}
+    --r: 14px;
+    --r-sm: 10px;
+  }
 
-/* ─── TABS ─── */
-.tabs{background:#fff;border-bottom:1px solid var(--line);padding:0 clamp(16px,4vw,48px);display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
-.tabs::-webkit-scrollbar{display:none}
-.tab{background:none;border:none;border-bottom:3px solid transparent;padding:14px 16px;font-family:'Inter',sans-serif;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s}
-.tab:hover{color:var(--ink)}
-.tab.active{color:var(--pine);border-bottom-color:var(--brass)}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ─── LAYOUT ─── */
-main{padding:clamp(16px,3vw,36px) clamp(16px,4vw,48px);max-width:1280px;margin:0 auto}
-.panel{display:none}
-.panel.active{display:block;animation:fadeIn .2s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
-@media(prefers-reduced-motion:reduce){.panel.active{animation:none}}
+  html { scroll-behavior: smooth; }
 
-.g{display:grid;gap:16px}
-.g2{grid-template-columns:repeat(2,1fr)}
-.g3{grid-template-columns:repeat(3,1fr)}
-.g4{grid-template-columns:repeat(4,1fr)}
-@media(max-width:900px){.g4{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:640px){.g2,.g3,.g4{grid-template-columns:1fr}}
+  body {
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(0,229,153,0.06), transparent 60%),
+      radial-gradient(900px 500px at 10% 10%, rgba(34,211,238,0.04), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
 
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
-.p20{padding:20px 22px}
-.p24{padding:24px 26px}
-.section-head{font-family:'Fraunces',serif;font-weight:700;font-size:17px;color:var(--ink);margin:28px 0 14px;display:flex;align-items:center;gap:10px}
-.section-head .rule{flex:1;height:1px;background:var(--line)}
+  .num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
 
-/* ─── KPI CARDS ─── */
-.kpi-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px}
-.kpi-dot{width:7px;height:7px;border-radius:50%;flex:none}
-.kpi-value{font-family:'Space Grotesk',monospace;font-weight:700;font-size:clamp(26px,4vw,36px);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em;margin-bottom:8px}
-.kpi-delta{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:999px;line-height:1.2}
-.kpi-delta.up{background:var(--pos-bg);color:var(--positive)}
-.kpi-delta.dn{background:var(--alert-bg);color:var(--alert)}
-.kpi-delta.nt{background:var(--sage-light);color:var(--sage)}
-.kpi-vs{font-size:11px;color:var(--muted);margin-top:4px}
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
 
-/* ─── SAÚDE FINANCEIRA ─── */
-.saude-grid{grid-template-columns:repeat(4,1fr)}
-@media(max-width:860px){.saude-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:520px){.saude-grid{grid-template-columns:1fr}}
-.saude-card{padding:16px 18px;display:flex;align-items:center;gap:12px}
-.saude-icon{font-size:20px;line-height:1;flex:none}
-.saude-info{}
-.saude-name{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-.saude-status{font-size:14px;font-weight:600;margin-top:2px}
-.saude-status.verde{color:var(--positive)}
-.saude-status.amarelo{color:var(--warn)}
-.saude-status.vermelho{color:var(--alert)}
+  /* ===== TOP BAR ===== */
+  .topbar {
+    border-bottom: 1px solid var(--border-soft);
+    background: rgba(10,14,15,0.7);
+    backdrop-filter: blur(14px);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-logo {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    display: grid; place-items: center;
+    box-shadow: 0 0 24px var(--accent-glow);
+  }
+  .brand-logo svg { width: 19px; height: 19px; }
+  .brand-name { font-weight: 700; font-size: 17px; letter-spacing: -0.3px; }
+  .brand-name span { color: var(--accent); }
+  .brand-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--text-faint);
+    text-transform: uppercase; letter-spacing: 1.5px;
+    border-left: 1px solid var(--border); padding-left: 12px; margin-left: 4px;
+  }
+  .live {
+    display: flex; align-items: center; gap: 7px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--text-dim);
+  }
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
 
-/* ─── VERDICT BANNER ─── */
-.verdict{background:linear-gradient(135deg,#1f4d3a,#173e2e);border-radius:var(--r);padding:22px 26px;color:#fff;margin-bottom:16px}
-.verdict-eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--brass-soft);font-weight:700;margin-bottom:8px}
-.verdict-title{font-family:'Fraunces',serif;font-size:20px;font-weight:700;line-height:1.2;margin-bottom:6px}
-.verdict-sub{font-size:13.5px;color:#c8dcd4;line-height:1.5}
+  /* ===== HERO ===== */
+  .hero { padding: 48px 0 28px; }
+  .hero-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; color: var(--accent); letter-spacing: 2px;
+    text-transform: uppercase; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .hero-eyebrow::before {
+    content: ''; width: 24px; height: 1px; background: var(--accent);
+  }
+  .hero h1 {
+    font-size: clamp(28px, 4vw, 44px); font-weight: 700;
+    letter-spacing: -1px; line-height: 1.08; margin-bottom: 16px;
+    max-width: 720px;
+  }
+  .hero h1 em { color: var(--accent); font-style: normal; }
+  .hero p {
+    color: var(--text-dim); font-size: 15px; max-width: 560px;
+  }
 
-/* ─── FLUXO DE CAIXA BARS ─── */
-.flow-row{margin-bottom:14px}
-.flow-row-head{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:5px}
-.flow-row-head .fl-label{font-weight:500;color:var(--ink)}
-.flow-row-head .fl-val{font-family:'Space Grotesk',monospace;font-weight:600;font-size:13.5px;font-variant-numeric:tabular-nums}
-.bar-track{height:10px;background:#f0ede4;border-radius:6px;overflow:hidden}
-.bar-fill{height:100%;border-radius:6px;transition:width .4s}
-.bar-green{background:linear-gradient(90deg,var(--pine),var(--pine-soft))}
-.bar-red{background:linear-gradient(90deg,var(--alert),#e07060)}
-.flow-result{border-top:1px dashed var(--line);margin-top:14px;padding-top:14px;display:flex;justify-content:space-between;align-items:center}
-.flow-result-label{font-size:14px;font-weight:600}
-.flow-result-val{font-family:'Space Grotesk',monospace;font-weight:700;font-size:22px;font-variant-numeric:tabular-nums}
+  /* ===== SNAPSHOT STRIP ===== */
+  .snapshot {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+    margin: 28px 0 8px;
+  }
+  .snap {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--r-sm);
+    padding: 16px 18px;
+    position: relative; overflow: hidden;
+  }
+  .snap::after {
+    content: ''; position: absolute; inset: 0 0 auto 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: 0.5;
+  }
+  .snap-label {
+    font-size: 11px; color: var(--text-faint); text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 8px; font-weight: 500;
+  }
+  .snap-value { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; }
+  .snap-value.num { font-weight: 600; }
+  .snap-sub { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
 
-/* ─── HORIZONTAL BAR LIST ─── */
-.hbar-list{list-style:none}
-.hbar-item{padding:10px 0;border-bottom:1px solid var(--line)}
-.hbar-item:last-child{border-bottom:none}
-.hbar-head{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;gap:8px}
-.hbar-name{font-weight:500;flex:1}
-.hbar-right{display:flex;align-items:center;gap:8px;flex:none}
-.hbar-val{font-family:'Space Grotesk',monospace;font-weight:600;font-variant-numeric:tabular-nums;font-size:13px}
-.hbar-pct{font-size:11px;color:var(--muted);min-width:38px;text-align:right}
-.hbar-track{height:6px;background:#f0ede4;border-radius:4px;overflow:hidden}
-.hbar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--pine),var(--pine-soft))}
+  /* ===== SECTION ===== */
+  .section { padding: 40px 0; }
+  .section-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 22px; flex-wrap: wrap; gap: 8px;
+  }
+  .section-title {
+    font-size: 20px; font-weight: 600; letter-spacing: -0.4px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title .idx {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: var(--accent); border: 1px solid var(--accent-dim);
+    border-radius: 6px; padding: 2px 7px; font-weight: 500;
+  }
+  .section-hint { font-size: 13px; color: var(--text-dim); }
 
-/* ─── CHART CONTAINERS ─── */
-.chart-card{padding:22px 24px}
-.chart-card h3{font-size:14px;font-weight:700;margin-bottom:3px}
-.chart-card .c-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
-.chart-wrap{position:relative}
-.chart-wrap.h260{height:260px}
-.chart-wrap.h300{height:300px}
-.chart-wrap.h340{height:340px}
+  /* ===== RANKING ===== */
+  .rank-list { display: flex; flex-direction: column; gap: 10px; }
+  .rank-row {
+    display: grid;
+    grid-template-columns: 36px 1.6fr 1fr 1fr 1fr;
+    align-items: center; gap: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--r);
+    padding: 16px 18px;
+    cursor: pointer;
+    transition: border-color 0.18s, transform 0.18s, background 0.18s;
+    position: relative; overflow: hidden;
+  }
+  .rank-row:hover {
+    border-color: var(--accent-dim);
+    transform: translateX(3px);
+    background: var(--bg-elev);
+  }
+  .rank-row.best {
+    border-color: var(--accent);
+    background: linear-gradient(90deg, var(--accent-soft), var(--surface) 40%);
+  }
+  .rank-row.best::before {
+    content: 'MELHOR'; position: absolute; top: 0; right: 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
+    letter-spacing: 1px; color: var(--bg);
+    background: var(--accent); padding: 3px 10px; border-radius: 0 0 0 8px;
+  }
+  .rank-pos {
+    font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700;
+    color: var(--text-faint); text-align: center;
+  }
+  .rank-row.best .rank-pos { color: var(--accent); }
+  .rank-name { font-weight: 600; font-size: 15px; letter-spacing: -0.2px; }
+  .rank-name small {
+    display: block; font-weight: 400; font-size: 12px;
+    color: var(--text-dim); margin-top: 2px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .rank-metric { text-align: right; }
+  .rank-metric .mv {
+    font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 600;
+  }
+  .rank-metric .ml {
+    font-size: 10px; color: var(--text-faint); text-transform: uppercase;
+    letter-spacing: 0.8px; margin-top: 2px;
+  }
+  .rank-metric .mv.juros { color: var(--text); }
+  .rank-metric .mv.quita { color: var(--cyan); }
+  .rank-metric .mv.aporte { color: var(--text-dim); }
 
-/* ─── FUNDOS ─── */
-.fund-group{margin-bottom:20px}
-.fund-group-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px;padding:0 2px}
-.fund-card{padding:16px 18px}
-.fund-name{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
-.fund-val{font-family:'Space Grotesk',monospace;font-weight:700;font-size:21px;margin:7px 0 5px;font-variant-numeric:tabular-nums;color:var(--pine)}
-.fund-delta{font-size:12px;font-weight:600}
-.fund-delta.up{color:var(--positive)}
-.fund-delta.dn{color:var(--alert)}
-.fund-delta.flat{color:var(--muted)}
+  /* mini bar showing relative juros */
+  .rank-bar {
+    grid-column: 1 / -1; height: 4px; border-radius: 2px;
+    background: var(--border); overflow: hidden; margin-top: 4px;
+  }
+  .rank-bar > i {
+    display: block; height: 100%; border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--cyan));
+  }
+  .rank-row.best .rank-bar > i { background: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
 
-/* ─── INADIMPLÊNCIA ─── */
-.inad-kpi{padding:20px 22px}
-.inad-kpi .ik-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-.inad-kpi .ik-val{font-family:'Space Grotesk',monospace;font-weight:700;font-size:28px;margin:8px 0 0;font-variant-numeric:tabular-nums}
-.inad-kpi.alert .ik-val{color:var(--alert)}
-table.inad-table{width:100%;border-collapse:collapse;font-size:13px}
-table.inad-table th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:10px 12px;border-bottom:2px solid var(--line);font-weight:700}
-table.inad-table th.r,table.inad-table td.r{text-align:right}
-table.inad-table td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
-table.inad-table td.mono{font-family:'Space Grotesk',monospace;font-weight:600;font-variant-numeric:tabular-nums}
-table.inad-table tr.hot td{background:#fdf5f2}
-.badge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;letter-spacing:.04em;margin-left:5px}
-.badge.J{background:#fde8e5;color:var(--alert)}
-.badge.A{background:var(--brass-xsoft);color:var(--brass)}
+  /* ===== DETAIL DRAWER ===== */
+  .detail {
+    margin-top: 14px;
+    background: var(--bg-elev);
+    border: 1px solid var(--accent-dim);
+    border-radius: var(--r);
+    padding: 0; overflow: hidden;
+    display: none;
+    animation: slidein 0.25s ease;
+  }
+  .detail.open { display: block; }
+  @keyframes slidein { from{opacity:0; transform:translateY(-6px);} to{opacity:1; transform:translateY(0);} }
 
-/* ─── EVOLUÇÃO STRIP ─── */
-.evol-strip{grid-template-columns:repeat(4,1fr);margin-bottom:20px}
-@media(max-width:860px){.evol-strip{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:520px){.evol-strip{grid-template-columns:1fr}}
-.es{padding:18px 20px}
-.es-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
-.es-val{font-family:'Space Grotesk',monospace;font-weight:700;font-size:22px;margin:8px 0 4px;font-variant-numeric:tabular-nums}
-.es-sub{font-size:12px;color:var(--muted)}
-.es-sub.pos{color:var(--positive);font-weight:600}
-.es-sub.neg{color:var(--alert);font-weight:600}
+  .detail-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px; border-bottom: 1px solid var(--border);
+    background: var(--surface); flex-wrap: wrap; gap: 12px;
+  }
+  .detail-head h3 { font-size: 16px; font-weight: 600; }
+  .detail-head h3 .tag {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--accent); margin-left: 8px;
+  }
+  .detail-kpis { display: flex; gap: 24px; }
+  .dk { text-align: right; }
+  .dk .v { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 15px; }
+  .dk .l { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.8px; }
+  .dk .v.accent { color: var(--accent); }
+  .dk .v.cyan { color: var(--cyan); }
 
-/* ─── INSIGHTS ─── */
-.insight-item{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:12px}
-.insight-item:last-child{border-bottom:none}
-.insight-icon{font-size:18px;line-height:1;flex:none;margin-top:1px}
-.insight-body{}
-.insight-title{font-size:14px;font-weight:600;line-height:1.3}
-.insight-sub{font-size:12.5px;color:var(--muted);margin-top:3px}
-.insight-section{padding:4px 0}
-.insight-section-head{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding:16px 16px 8px;border-bottom:1px solid var(--line)}
+  .detail-close {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-dim); width: 30px; height: 30px; border-radius: 8px;
+    cursor: pointer; font-size: 16px; display: grid; place-items: center;
+    transition: all 0.15s;
+  }
+  .detail-close:hover { border-color: var(--rose); color: var(--rose); }
 
-/* ─── PROJEÇÃO (future PO months) ─── */
-.month-chip.projecao{border-style:dashed;opacity:.75}
-.month-chip.projecao.active{opacity:1;background:var(--brass);border-color:var(--brass);border-style:solid}
-.proj-banner{background:var(--brass-xsoft);border:1px solid var(--brass-soft);border-radius:var(--r);padding:14px 18px;font-size:13.5px;display:flex;gap:10px;align-items:flex-start;margin-bottom:16px}
-.proj-banner b{color:var(--brass)}
+  /* table */
+  .tbl-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 720px; }
+  thead th {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-faint); font-weight: 600; text-align: right;
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  thead th:first-child { text-align: left; }
+  tbody td {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    text-align: right; padding: 11px 16px;
+    border-bottom: 1px solid var(--border-soft); color: var(--text);
+    white-space: nowrap;
+  }
+  tbody td:first-child {
+    text-align: left; font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600; color: var(--text);
+  }
+  tbody tr:hover td { background: rgba(255,255,255,0.015); }
 
-/* ─── ORÇAMENTO TAB ─── */
-.po-header{background:linear-gradient(135deg,#1a3a2a,#0f2318);border-radius:var(--r);padding:22px 26px;color:#fff;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
-.po-header-title{font-family:'Fraunces',serif;font-size:18px;font-weight:700}
-.po-header-sub{font-size:13px;color:#a0c4b0;margin-top:4px}
-.po-kpis{display:flex;gap:24px;flex-wrap:wrap}
-.po-kpi{text-align:right}
-.po-kpi .pk-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--brass-soft)}
-.po-kpi .pk-val{font-family:'Space Grotesk',monospace;font-weight:700;font-size:20px;color:#fff;font-variant-numeric:tabular-nums}
+  tr.r-hist td { color: var(--text-dim); }
+  tr.r-hist td:first-child { color: var(--text-dim); }
+  tr.r-parcial td:first-child { color: var(--amber); }
+  tr.r-amort td { background: rgba(34,211,238,0.05); }
+  tr.r-amort td:first-child { color: var(--cyan); }
+  tr.r-quit td { background: var(--accent-soft); }
+  tr.r-quit td:first-child { color: var(--accent); }
 
-/* orcado vs realizado bar rows */
-.ovr-row{padding:12px 0;border-bottom:1px solid var(--line)}
-.ovr-row:last-child{border-bottom:none}
-.ovr-head{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:6px}
-.ovr-label{font-weight:600}
-.ovr-vals{display:flex;gap:14px;align-items:baseline;font-family:'Space Grotesk',monospace;font-variant-numeric:tabular-nums}
-.ovr-orcado{font-size:12px;color:var(--muted)}
-.ovr-real{font-size:14px;font-weight:700}
-.ovr-diff{font-size:12px;font-weight:700;padding:1px 7px;border-radius:5px}
-.ovr-diff.ok{background:var(--pos-bg);color:var(--positive)}
-.ovr-diff.over{background:var(--alert-bg);color:var(--alert)}
-.ovr-bars{display:grid;grid-template-columns:1fr 1fr;gap:4px}
-.ovr-bar-wrap{position:relative}
-.ovr-bar-label{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:3px}
-.ovr-track{height:8px;background:#f0ede4;border-radius:4px;overflow:hidden}
-.ovr-fill-orc{height:100%;background:var(--line);border-radius:4px}
-.ovr-fill-real{height:100%;border-radius:4px}
-.ovr-fill-real.ok{background:linear-gradient(90deg,var(--positive),#4caf7d)}
-.ovr-fill-real.over{background:linear-gradient(90deg,var(--alert),#e07060)}
+  .cell-extra { color: var(--cyan) !important; font-weight: 600; }
+  .cell-faint { color: var(--text-faint) !important; }
+  .badge-quit {
+    color: var(--accent) !important; font-weight: 700; letter-spacing: 1px;
+    text-align: center !important; display: block;
+  }
+  .chip {
+    display: inline-block; font-size: 9px; font-family: 'JetBrains Mono', monospace;
+    padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle;
+    font-weight: 600; letter-spacing: 0.5px;
+  }
+  .chip.real { background: rgba(143,166,160,0.15); color: var(--text-dim); }
+  .chip.part { background: rgba(251,191,36,0.15); color: var(--amber); }
 
-/* PO monthly grid */
-.po-month-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-@media(max-width:900px){.po-month-grid{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:640px){.po-month-grid{grid-template-columns:repeat(2,1fr)}}
-.po-month-card{padding:16px 18px}
-.po-mc-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-.po-mc-val{font-family:'Space Grotesk',monospace;font-weight:700;font-size:22px;color:var(--pine);margin:6px 0 4px;font-variant-numeric:tabular-nums}
-.po-mc-sub{font-size:11.5px;color:var(--muted)}
-.po-mc-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;margin-top:6px;display:inline-block}
-.po-mc-badge.fut{background:var(--brass-xsoft);color:var(--brass)}
+  .detail-note {
+    padding: 14px 22px; font-size: 12px; color: var(--text-dim);
+    border-top: 1px solid var(--border-soft); background: var(--surface);
+    font-family: 'JetBrains Mono', monospace; line-height: 1.7;
+  }
 
-/* aderencia gauge */
-.ader-pct{font-family:'Space Grotesk',monospace;font-weight:700;font-size:24px;font-variant-numeric:tabular-nums}
-.ader-pct.ok{color:var(--positive)}
-.ader-pct.warn{color:var(--warn)}
-.ader-pct.over{color:var(--alert)}
-.note{background:var(--brass-xsoft);border:1px dashed var(--brass-soft);border-radius:10px;padding:12px 16px;font-size:13px;display:flex;gap:10px;align-items:flex-start;margin-bottom:16px}
-.note b{color:var(--brass)}
-footer{text-align:center;font-size:11px;color:var(--muted);padding:24px 20px 40px}
+  /* ===== INSIGHT CARD (amortizar vs investir) ===== */
+  .insight {
+    background:
+      linear-gradient(135deg, rgba(0,229,153,0.07), transparent 50%),
+      var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r); padding: 28px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 28px;
+  }
+  .insight-side h4 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-faint); margin-bottom: 14px; font-weight: 600;
+  }
+  .vs-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0; border-bottom: 1px solid var(--border-soft);
+  }
+  .vs-row:last-child { border-bottom: none; }
+  .vs-label { font-size: 13px; color: var(--text-dim); }
+  .vs-val { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 15px; }
+  .vs-val.win { color: var(--accent); }
+  .vs-val.lose { color: var(--rose); }
+  .insight-verdict {
+    display: flex; flex-direction: column; justify-content: center;
+    padding-left: 28px; border-left: 1px solid var(--border);
+  }
+  .insight-verdict .big {
+    font-size: 19px; font-weight: 600; letter-spacing: -0.4px; line-height: 1.35;
+    margin-bottom: 12px;
+  }
+  .insight-verdict .big b { color: var(--accent); }
+  .insight-verdict p { font-size: 13px; color: var(--text-dim); line-height: 1.7; }
 
-@media print{
-  .masthead,.month-nav,.tabs{display:none}
-  .panel{display:block!important}
-  body{background:#fff}
-  .card{box-shadow:none}
-}
+  /* ===== FOOTER ===== */
+  footer {
+    border-top: 1px solid var(--border-soft); margin-top: 48px;
+    padding: 24px 0 40px;
+  }
+  .footer-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-faint);
+  }
+  .footer-inner strong { color: var(--text-dim); font-weight: 600; }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 860px) {
+    .snapshot { grid-template-columns: repeat(2,1fr); }
+    .insight { grid-template-columns: 1fr; }
+    .insight-verdict { padding-left: 0; border-left: none; padding-top: 20px; border-top: 1px solid var(--border); }
+    .rank-row { grid-template-columns: 30px 1fr; row-gap: 10px; }
+    .rank-name { grid-column: 2; }
+    .rank-metric { grid-column: 2; display: flex; justify-content: space-between; text-align: left; }
+    .rank-metric .ml { margin-top: 0; }
+    .detail-kpis { display: none; }
+  }
+  @media (max-width: 520px) {
+    .snapshot { grid-template-columns: 1fr 1fr; }
+    .hero { padding: 32px 0 20px; }
+  }
 </style>
 </head>
 <body>
-<header class="masthead">
-  <div class="masthead-inner">
-    <div>
-      <div class="brand-eyebrow">Demonstrativo Financeiro</div>
-      <div class="brand-name">Condomínio Alpha Garden</div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18M12 21c-4-1-7-4-7-9 3 0 5 1 7 4M12 14c2-3 4-4 7-4 0 4-2 7-7 7" stroke="#0a0e0f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">Garden<span>.</span></div>
+      </div>
+      <div class="brand-tag">Simulador · SAC</div>
+    </div>
+    <div class="live">
+      <span class="live-dot"></span>
+      Base atualizada · ago/2026
     </div>
   </div>
-</header>
+</div>
 
-<nav class="month-nav" id="monthNav"></nav>
+<!-- HERO -->
+<div class="wrap">
+  <div class="hero">
+    <div class="hero-eyebrow">Financiamento Imobiliário</div>
+  </div>
 
-<nav class="tabs" id="tabs">
-  <button class="tab active" data-tab="visao">Visão Geral</button>
-  <button class="tab" data-tab="despesas">Despesas</button>
-  <button class="tab" data-tab="reservas">Fundos & Reservas</button>
-  <button class="tab" data-tab="inad">Inadimplência</button>
-  <button class="tab" data-tab="evol">Evolução</button>
-  <button class="tab" data-tab="insights">Insights</button>
-  <button class="tab" data-tab="orcamento">Orçamento</button>
-</nav>
+  <!-- SNAPSHOT -->
+  <div class="snapshot">
+    <div class="snap">
+      <div class="snap-label">Saldo devedor</div>
+      <div class="snap-value num">R$ 614k</div>
+      <div class="snap-sub">posição em 18/08/2026</div>
+    </div>
+    <div class="snap">
+      <div class="snap-label">Parcelas a vencer</div>
+      <div class="snap-value num">305<span style="color:var(--text-faint);font-size:16px;">/320</span></div>
+      <div class="snap-sub">15 já quitadas</div>
+    </div>
+    <div class="snap">
+      <div class="snap-label">Taxa efetiva</div>
+      <div class="snap-value num" style="color:var(--amber);">12,40%</div>
+      <div class="snap-sub">ao ano · sistema SAC</div>
+    </div>
+    <div class="snap">
+      <div class="snap-label">Custo do dinheiro</div>
+      <div class="snap-value num">0,98%</div>
+      <div class="snap-sub">ao mês equivalente</div>
+    </div>
+  </div>
+</div>
 
-<main>
-  <section class="panel active" id="visao"></section>
-  <section class="panel" id="despesas"></section>
-  <section class="panel" id="reservas"></section>
-  <section class="panel" id="inad"></section>
-  <section class="panel" id="evol"></section>
-  <section class="panel" id="insights"></section>
-  <section class="panel" id="orcamento"></section>
-</main>
+<!-- RANKING -->
+<div class="wrap">
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title"><span class="idx">01</span> Ranking de estratégias</div>
+      <div class="section-hint">do menor ao maior custo de juros · clique para detalhar</div>
+    </div>
+    <div class="rank-list" id="rankList"></div>
+    <div class="detail" id="detail"></div>
+  </div>
+</div>
 
-<footer>Painel Financeiro · Condomínio Alpha Garden · Administradora Graiche · Os valores refletem exatamente as folhas de demonstrativo contábil.</footer>
+<!-- INSIGHT -->
+<div class="wrap">
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title"><span class="idx">02</span> Amortizar ou investir?</div>
+      <div class="section-hint">a pergunta que decide tudo</div>
+    </div>
+    <div class="insight">
+      <div class="insight-side">
+        <h4>Retorno comparado · ao ano</h4>
+        <div class="vs-row">
+          <span class="vs-label">Amortizar (economia garantida)</span>
+          <span class="vs-val">12,40%</span>
+        </div>
+        <div class="vs-row">
+          <span class="vs-label">Investir a 1,1% ao mês</span>
+          <span class="vs-val win">14,03%</span>
+        </div>
+        <div class="vs-row">
+          <span class="vs-label">Diferença a favor do investimento</span>
+          <span class="vs-val win">+1,63 p.p.</span>
+        </div>
+        <div class="vs-row">
+          <span class="vs-label">Risco: TR sobe acima de zero</span>
+          <span class="vs-val lose">reduz vantagem</span>
+        </div>
+      </div>
+      <div class="insight-verdict">
+        <div class="big">Investir rende mais que a dívida custa — mas a estratégia vencedora é <b>híbrida</b>.</div>
+        <p>Acumular a 1,1%/mês e amortizar em blocos grandes quando o montante for relevante. No SAC, aportes concentrados cortam mais prazo que parcelas pequenas. A renegociação por portabilidade fica como bônus se os juros caírem — não como plano principal.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap footer-inner">
+    <span><strong>Simulação informativa.</strong> TR projetada = 0% · SAC · amortização reduz prazo</span>
+    <span>Saldo base R$ 613.808 · 18/08/2026 (ago projetado)</span>
+  </div>
+</footer>
 
 <script>
+const TAXA_MENSAL = 0.009327;
+const SALDO_ATUAL = 613808.37;
+const PRAZO_ATUAL = 305;
 
-// Full dataset. fundos: [saldoAnterior, creditos, debitos]; atual = ant+cred-deb
-const MESES = {
-  "2025-05": {
-    mesLabel:"Maio 2025", periodo:"01/05/2025 a 31/05/2025",
-    orcado:{total:205086, pessoal:134370, consumos:25930, contratos:13730, manutencoes:11600, higiene:4600, obrigacoes:3700, gerais:14750, receita:205086},
-    fundos:{
-      "Caixa Ordinário":[-37440.12,207439.29,220828.52],
-      "Uso de Salões/Espaços":[31972.24,0,0],
-      "Fundo de Reserva":[551075.80,113546.44,2027.06],
-      "Pinturas":[100037.81,1638.37,101676.18],
-      "Piscina":[78379.78,6949.03,8394.08],
-      "Seguro Proteção Res+":[26.20,1480.00,1480.00]
-    },
-    banco:{cc:352313.87,cdb:133668.07,vipdi:234717.06},
-    receitas:[["Recebimentos do período",159931.91],["Condôminos em atraso recebidos",14074.62],["Gás (reembolso)",18832.90],["Cotas antecipadas",10798.42],["Rendimento de aplicações",1558.55],["Multas taxa condominial",774.26],["Reembolso custas judiciais",419.72],["Juros",417.06],["Créditos efetuados",408.77],["Atualização monetária",149.84],["Aluguel de espaço",73.24]],
-    despesas:[["Serviços contratados",111378.70],["Consumos",46017.67],["Despesas com pessoal",25536.51],["Manutenção e conservação",12376.90],["Compra materiais e equipamento",6282.36],["Encargos sociais",5554.68],["Taxa de administração",5453.00],["Manut. e conservação eventuais",3767.52],["Seguros",2657.49],["Despesas gerais",1402.41],["Impostos e taxas",401.28]],
-    inadimplencia:[["000234","05/12/2013 a 15/04/2025",55833.18,"J"],["000314","05/11/2024 a 15/05/2025",10519.30,""],["000031","05/04/2025 a 15/05/2025",4157.22,""],["000204","05/03/2025 a 05/04/2025",2838.74,""],["000191","05/05/2025 a 15/05/2025",1886.39,""],["000202","05/05/2025 a 05/05/2025",1630.39,""],["000014","05/05/2025 a 15/05/2025",1611.73,""],["000254","05/05/2025 a 05/05/2025",1202.87,""],["000142","15/05/2025 a 15/05/2025",373.50,""],["000223","15/05/2025 a 15/05/2025",373.50,""],["000192","15/05/2025 a 15/05/2025",264.39,""],["000073","15/04/2025 a 15/05/2025",218.15,""],["000302","15/05/2025 a 15/05/2025",163.68,""],["000324","15/03/2025 a 15/05/2025",89.29,""],["000011","15/05/2025 a 15/05/2025",88.15,""],["000012","15/05/2025 a 15/05/2025",54.58,""]]
-  },
-  "2025-06": {
-    mesLabel:"Junho 2025", periodo:"01/06/2025 a 30/06/2025",
-    orcado:{total:205086, pessoal:134370, consumos:25930, contratos:13730, manutencoes:11600, higiene:4600, obrigacoes:3700, gerais:14750, receita:205086},
-    fundos:{
-      "Caixa Ordinário":[-50829.35,203096.59,176941.34],
-      "Uso de Salões/Espaços":[31972.24,3000.00,0],
-      "Fundo de Reserva":[662595.18,11371.00,0],
-      "Pinturas":[0,1287.63,1287.63],
-      "Piscina":[76934.73,7175.22,5791.23],
-      "Seguro Proteção Res+":[26.20,1477.92,1504.12]
-    },
-    banco:{cc:390217.56,cdb:135133.31,vipdi:237232.17},
-    receitas:[["Recebimentos do período",153685.85],["Gás (reembolso)",21493.67],["Condôminos em atraso recebidos",15829.72],["Cotas antecipadas",7691.65],["Rendimento de aplicações",1509.84],["Transferência",1287.63],["Multas taxa condominial",741.32],["Honorários advogado contratado",480.12],["Juros",196.61],["Atualização monetária",88.79],["Aluguel de espaço",84.39],["Outros recebimentos",7.00]],
-    despesas:[["Serviços contratados",61183.16],["Consumos",46883.47],["Despesas com pessoal",21867.05],["Compra materiais e equipamento",13722.23],["Manutenção e conservação",12857.31],["Encargos sociais",8061.29],["Taxa de administração",5453.00],["Manut. e conservação eventuais",4841.71],["Despesas gerais",1670.84],["Impostos e taxas",401.28]],
-    inadimplencia:[["000234","05/12/2013 a 15/04/2025",54453.31,"J"],["000031","05/04/2025 a 15/06/2025",6243.48,""],["000314","05/04/2025 a 15/06/2025",4481.03,""],["000142","15/05/2025 a 15/06/2025",2385.02,""],["000324","15/03/2025 a 15/06/2025",2237.27,""],["000302","15/05/2025 a 15/06/2025",1981.53,""],["000223","15/05/2025 a 15/06/2025",1971.46,""],["000231","05/06/2025 a 15/06/2025",1884.29,""],["000202","05/06/2025 a 05/06/2025",1630.39,""],["000312","05/06/2025 a 05/06/2025",1630.39,""],["000014","05/06/2025 a 15/06/2025",1611.73,""],["000254","05/06/2025 a 05/06/2025",1202.87,""],["000212","15/06/2025 a 15/06/2025",577.80,""],["000233","15/06/2025 a 15/06/2025",312.04,""],["000271","15/06/2025 a 15/06/2025",253.90,""],["000174","15/06/2025 a 15/06/2025",121.02,""],["000073","15/04/2025 a 15/04/2025",96.43,""],["000011","15/05/2025 a 15/05/2025",88.15,""]]
-  },
-  "2025-07": {
-    mesLabel:"Julho 2025", periodo:"01/07/2025 a 31/07/2025",
-    orcado:{total:205086, pessoal:134370, consumos:25930, contratos:13730, manutencoes:11600, higiene:4600, obrigacoes:3700, gerais:14750, receita:205086},
-    fundos:{
-      "Caixa Ordinário":[-24674.10,219004.47,170464.01],
-      "Uso de Salões/Espaços":[34972.24,1900.00,0],
-      "Fundo de Reserva":[673966.18,12358.66,0],
-      "Pinturas":[0,322.99,322.99],
-      "Piscina":[78318.72,7615.18,0],
-      "Seguro Proteção Res+":[0,1557.56,1557.56]
-    },
-    banco:{cc:455952.52,cdb:136857.25,vipdi:240187.57},
-    receitas:[["Recebimentos do período",161043.71],["Gás (reembolso)",24652.44],["Condôminos em atraso recebidos",18294.07],["Cotas antecipadas",9409.06],["Rendimento de aplicações",1847.50],["Atualização monetária",1126.39],["Juros",896.35],["Multas taxa condominial",759.28],["Honorários advogado contratado",539.67],["Transferência",322.99],["Aluguel de espaço",113.01]],
-    despesas:[["Serviços contratados",64377.40],["Consumos",53379.68],["Despesas com pessoal",17425.83],["Manutenção e conservação",12876.58],["Encargos sociais",7820.30],["Taxa de administração",5453.00],["Manut. e conservação eventuais",3783.89],["Compra materiais e equipamento",2717.83],["Despesas gerais",2291.58],["Impostos e taxas",337.92]],
-    inadimplencia:[["000234","05/02/2014 a 15/04/2025",52515.73,"J"],["000314","05/04/2025 a 15/07/2025",5996.27,""],["000031","05/06/2025 a 15/07/2025",4253.72,""],["000324","05/07/2025 a 15/07/2025",2147.98,""],["000302","15/05/2025 a 15/07/2025",2014.11,""],["000142","15/05/2025 a 05/07/2025",2006.54,""],["000231","05/07/2025 a 15/07/2025",1866.98,""],["000202","05/07/2025 a 05/07/2025",1630.39,""],["000223","15/05/2025 a 05/06/2025",1576.37,""],["000014","05/07/2025 a 05/07/2025",1557.15,""],["000254","05/07/2025 a 05/07/2025",1202.87,""],["000041","15/07/2025 a 15/07/2025",435.15,""],["000092","15/07/2025 a 15/07/2025",294.50,""],["000033","15/07/2025 a 15/07/2025",220.04,""],["000303","15/07/2025 a 15/07/2025",211.77,""],["000244","15/07/2025 a 15/07/2025",170.40,""],["000073","15/07/2025 a 15/07/2025",129.04,""]]
-  },
-  "2025-08": {
-    mesLabel:"Agosto 2025", periodo:"01/08/2025 a 31/08/2025",
-    orcado:{total:205086, pessoal:134370, consumos:25930, contratos:13730, manutencoes:11600, higiene:4600, obrigacoes:3700, gerais:14750, receita:205086},
-    fundos:{
-      "Caixa Ordinário":[23866.36,209443.56,175421.72],
-      "Uso de Salões/Espaços":[36872.24,2157.91,0],
-      "Melhoramentos":[0,766.70,0],
-      "Fundo de Reserva":[686324.84,12363.84,0],
-      "Pinturas":[0,161.71,161.71],
-      "Piscina":[85933.90,7019.73,0],
-      "Seguro Proteção Res+":[0,1451.72,1399.32]
-    },
-    banco:{cc:307260.53,cdb:138450.48,vipdi:443668.75},
-    receitas:[["Recebimentos do período",159899.39],["Gás (reembolso)",26080.86],["Condôminos em atraso recebidos",11389.29],["Cotas antecipadas",6966.57],["Rendimento de aplicações",1881.47],["Atualização monetária",1027.51],["Juros",812.58],["Honorários advogado contratado",650.99],["Multas taxa condominial",580.52],["Aluguel de espaço",133.38],["Controle remoto / TAG",21.00]],
-    despesas:[["Consumos",55887.96],["Serviços contratados",54498.78],["Despesas com pessoal",23988.05],["Manutenção e conservação",14671.02],["Encargos sociais",8332.65],["Compra materiais e equipamento",7376.70],["Taxa de administração",5453.00],["Manut. e conservação eventuais",3076.89],["Despesas gerais",1798.75],["Impostos e taxas",337.92]],
-    inadimplencia:[["000234","05/03/2014 a 15/04/2025",50702.99,"J"],["000314","05/04/2025 a 15/08/2025",7493.79,"J"],["000324","05/07/2025 a 15/08/2025",4295.96,""],["000031","05/08/2025 a 15/08/2025",2198.04,""],["000191","05/08/2025 a 15/08/2025",2071.90,""],["000302","15/05/2025 a 05/06/2025",1794.07,"J"],["000202","05/08/2025 a 05/08/2025",1780.39,""],["000033","15/07/2025 a 15/08/2025",1709.32,""],["000142","05/07/2025 a 05/07/2025",1633.04,""],["000231","05/07/2025 a 05/07/2025",1630.39,""],["000014","05/08/2025 a 15/08/2025",1611.73,""],["000223","15/05/2025 a 05/06/2025",1576.37,""],["000254","05/08/2025 a 05/08/2025",1202.87,""],["000193","15/08/2025 a 15/08/2025",441.51,""],["000042","15/08/2025 a 15/08/2025",260.39,""],["000052","15/08/2025 a 15/08/2025",243.93,""],["000073","15/08/2025 a 15/08/2025",145.14,""]]
-  },
-  "2025-09": {
-    mesLabel:"Setembro 2025", periodo:"01/09/2025 a 30/09/2025",
-    orcado:{total:205086, pessoal:134370, consumos:25930, contratos:13730, manutencoes:11600, higiene:4600, obrigacoes:3700, gerais:14750, receita:205086},
-    fundos:{
-      "Caixa Ordinário":[57888.20,291965.86,365597.93],
-      "Uso de Salões/Espaços":[39030.15,2010.96,0],
-      "Melhoramentos":[766.70,17090.18,13434.00],
-      "Fundo de Reserva":[698688.68,15827.93,49365.00],
-      "Pinturas":[0,330.93,330.93],
-      "Piscina":[92953.63,6958.54,0],
-      "Seguro Proteção Res+":[52.40,1583.24,1582.72]
-    },
-    banco:{cc:205764.39,cdb:140139.48,vipdi:448932.95},
-    receitas:[["Recebimentos do período",187241.58],["Transferência",49695.93],["Gás (reembolso)",25261.58],["Condôminos em atraso recebidos",14916.64],["Cotas antecipadas",9190.73],["Honorários advogado contratado",1793.52],["Rendimento de aplicações",1772.87],["Multa regulamentar",881.05],["Multas taxa condominial",742.28],["Juros",198.64],["Aluguel de espaço",191.68],["Atualização monetária",58.36],["Controle remoto / TAG",21.00]],
-    despesas:[["Serviços contratados",245215.45],["Consumos",51523.23],["Despesas com pessoal",26760.66],["Manutenção e conservação",15529.26],["Compra materiais e equipamento",9429.34],["Encargos sociais",7182.92],["Taxa de administração",5453.00],["Despesas gerais",2145.69],["Manut. e conservação eventuais",1745.90],["Impostos e taxas",612.48]],
-    inadimplencia:[["000234","05/03/2014 a 15/04/2025",48311.40,"J"],["000314","05/04/2025 a 15/09/2025",9312.51,"J"],["000031","05/08/2025 a 15/09/2025",4836.38,""],["000142","05/09/2025 a 05/09/2025",2406.49,""],["000202","05/09/2025 a 05/09/2025",2153.22,""],["000324","05/08/2025 a 05/08/2025",2093.40,""],["000014","05/09/2025 a 15/09/2025",1967.82,""],["000302","15/05/2025 a 05/06/2025",1794.07,"J"],["000073","15/08/2025 a 15/09/2025",1719.94,""],["000223","15/05/2025 a 05/06/2025",1576.37,"J"],["000254","05/09/2025 a 05/09/2025",1477.94,""],["000033","15/08/2025 a 15/09/2025",534.80,""],["000193","15/08/2025 a 15/08/2025",441.51,""],["000061","15/09/2025 a 15/09/2025",314.76,""],["000042","15/09/2025 a 15/09/2025",233.45,""],["000083","15/09/2025 a 15/09/2025",168.41,""],["000011","15/09/2025 a 15/09/2025",135.89,""],["000271","15/09/2025 a 15/09/2025",54.58,""]]
-  },
-  "2025-10": {
-    mesLabel:"Outubro 2025", periodo:"01/10/2025 a 31/10/2025",
-    orcado:{total:205086, pessoal:134370, consumos:25930, contratos:13730, manutencoes:11600, higiene:4600, obrigacoes:3700, gerais:14750, receita:205086},
-    fundos:{
-      "Caixa Ordinário":[-15743.87,235842.86,221506.24],
-      "Uso de Salões/Espaços":[41041.11,2065.04,0],
-      "Melhoramentos":[4422.88,17971.43,5175.00],
-      "Fundo de Reserva":[665151.61,15991.60,5392.45],
-      "Pinturas":[0,169.67,169.67],
-      "Piscina":[99912.17,6907.76,0],
-      "Seguro Proteção Res+":[52.92,1459.24,1429.36]
-    },
-    banco:{cc:245121.75,cdb:141927.28,vipdi:454522.67},
-    receitas:[["Recebimentos do período",183720.25],["Gás (reembolso)",23123.28],["Cotas antecipadas",12254.30],["Condôminos em atraso recebidos",11482.91],["Rendimento de aplicações",1829.40],["Atualização monetária",1040.79],["Multas taxa condominial",842.40],["Juros",836.43],["Honorários advogado contratado",668.96],["Aluguel de espaço",44.14]],
-    despesas:[["Serviços contratados",101292.52],["Consumos",55469.81],["Despesas com pessoal",21350.20],["Manutenção e conservação",15760.02],["Encargos sociais",8524.33],["Taxa de administração",5453.00],["Manut. e conservação eventuais",4795.47],["Seguros",2930.37],["Impostos e taxas",2342.64],["Despesas gerais",1930.88],["Compra materiais e equipamento",1657.00]],
-    inadimplencia:[["000234","05/06/2014 a 15/04/2025",46471.77,"J"],["000314","05/04/2025 a 15/10/2025",11082.45,"J"],["000031","05/08/2025 a 15/10/2025",4787.60,""],["000073","15/08/2025 a 05/10/2025",3104.28,""],["000231","05/10/2025 a 15/10/2025",2261.06,""],["000324","05/08/2025 a 15/10/2025",2147.98,""],["000302","15/05/2025 a 15/10/2025",2011.26,"J"],["000202","05/10/2025 a 05/10/2025",2003.22,""],["000193","15/08/2025 a 15/10/2025",1974.03,""],["000014","05/10/2025 a 05/10/2025",1913.24,""],["000223","15/05/2025 a 05/06/2025",1576.37,"J"],["000254","05/10/2025 a 05/10/2025",1477.94,""],["000061","15/10/2025 a 15/10/2025",282.24,""],["000011","15/09/2025 a 15/10/2025",279.91,""],["000052","15/10/2025 a 15/10/2025",233.45,""],["000303","15/10/2025 a 15/10/2025",217.19,""],["000313","15/10/2025 a 15/10/2025",119.62,""],["000013","15/10/2025 a 15/10/2025",95.23,""],["000271","15/10/2025 a 15/10/2025",54.58,""]]
-  },
-  "2025-11": {
-    mesLabel:"Novembro 2025", periodo:"01/11/2025 a 30/11/2025",
-    orcado:{total:205086, pessoal:134370, consumos:25930, contratos:13730, manutencoes:11600, higiene:4600, obrigacoes:3700, gerais:14750, receita:205086},
-    fundos:{
-      "Caixa Ordinário":[-1407.25,224555.26,209275.89],
-      "Uso de Salões/Espaços":[43106.15,1653.00,0],
-      "Melhoramentos":[17219.31,17525.40,0],
-      "Fundo de Reserva":[675750.76,14972.53,9042.45],
-      "Pinturas":[0,172.06,172.06],
-      "Piscina":[106819.93,7070.83,6129.92],
-      "Seguro Proteção Res+":[82.80,1499.17,0]
-    },
-    banco:{cc:285455.32,cdb:143421.35,vipdi:455522.96},
-    receitas:[["Recebimentos do período",177967.60],["Condôminos em atraso recebidos",14305.04],["Cotas antecipadas",14017.83],["Gás (reembolso)",13744.85],["Rendimento de aplicações",1536.20],["Atualização monetária",988.58],["Juros",897.89],["Multas taxa condominial",743.69],["Transferência",172.06],["Honorários advogado contratado",129.14],["Aluguel de espaço",52.38]],
-    despesas:[["Serviços contratados",95116.43],["Consumos",42939.95],["Despesas com pessoal",26669.20],["Manutenção e conservação",12631.58],["Compra materiais e equipamento",10119.40],["Encargos sociais",7005.03],["Manut. e conservação eventuais",6304.22],["Taxa de administração",5738.10],["Despesas gerais",2350.70],["Impostos e taxas",401.28]],
-    inadimplencia:[["000234","05/07/2014 a 15/04/2025",44663.19,"J"],["000314","05/04/2025 a 15/11/2025",12709.65,""],["000231","05/10/2025 a 15/11/2025",4318.86,""],["000193","15/08/2025 a 05/11/2025",3451.97,""],["000081","05/11/2025 a 15/11/2025",2226.48,""],["000324","05/08/2025 a 05/08/2025",2093.40,""],["000191","05/11/2025 a 15/11/2025",2057.80,""],["000022","05/11/2025 a 05/11/2025",2004.86,""],["000202","05/11/2025 a 05/11/2025",2003.22,""],["000302","15/05/2025 a 15/11/2025",1946.86,"J"],["000014","05/11/2025 a 15/11/2025",1967.82,""],["000223","15/05/2025 a 05/06/2025",1576.37,"J"],["000031","05/11/2025 a 15/11/2025",2350.54,""],["000192","15/11/2025 a 15/11/2025",245.84,""],["000173","15/11/2025 a 15/11/2025",209.66,""],["000061","15/11/2025 a 15/11/2025",194.15,""],["000011","15/09/2025 a 15/09/2025",135.89,""],["000174","15/11/2025 a 15/11/2025",116.61,""],["000271","15/10/2025 a 15/11/2025",109.16,""]]
-  },
-  "2025-12": {
-    mesLabel:"Dezembro 2025", periodo:"01/12/2025 a 31/12/2025",
-    orcado:{total:205086, pessoal:134370, consumos:25930, contratos:13730, manutencoes:11600, higiene:4600, obrigacoes:3700, gerais:14750, receita:205086},
-    fundos:{
-      "Caixa Ordinário":[13872.12,250438.63,307172.45],
-      "Uso de Salões/Espaços":[44759.15,450.00,10950.00],
-      "Melhoramentos":[34744.71,16870.81,8259.00],
-      "Fundo de Reserva":[681680.84,16648.53,5392.45],
-      "Pinturas":[0,171.36,171.36],
-      "Piscina":[107760.84,7370.89,12557.76],
-      "Seguro Proteção Res+":[1581.97,1640.80,3167.57]
-    },
-    banco:{cc:224203.74,cdb:145170.99,vipdi:460945.33},
-    receitas:[["Recebimentos do período",178890.28],["Condôminos em atraso recebidos",24114.73],["Cotas antecipadas",20142.12],["Gás (reembolso)",18739.45],["Atualização monetária",1988.33],["Juros",1935.16],["Rendimento de aplicações",1824.74],["Honorários advogado contratado",929.84],["Multas taxa condominial",891.73],["Salões",400.00],["Reembolso custas judiciais",379.86],["Controle remoto / TAG",118.00],["Aluguel de espaço",84.39]],
-    despesas:[["Serviços contratados",152175.06],["Consumos",51790.87],["Despesas com pessoal",39066.48],["Manutenção e conservação",20543.95],["Compra materiais e equipamento",16343.31],["Encargos sociais",8889.37],["Manut. e conservação eventuais",7907.03],["Taxa de administração",5752.00],["Seguros",2930.37],["Despesas gerais",1414.97],["Impostos e taxas",359.04]],
-    inadimplencia:[["000234","05/09/2014 a 15/04/2025",43383.63,"J"],["000193","15/08/2025 a 15/12/2025",4984.49,""],["000031","05/11/2025 a 15/12/2025",4752.63,""],["000022","05/11/2025 a 05/11/2025",2004.86,""],["000191","05/11/2025 a 05/11/2025",2003.22,""],["000202","05/12/2025 a 05/12/2025",2003.22,""],["000081","05/12/2025 a 05/12/2025",2006.49,""],["000302","15/05/2025 a 15/12/2025",1981.73,""],["000254","05/12/2025 a 15/12/2025",1848.59,""],["000014","05/12/2025 a 05/12/2025",1913.24,""],["000314","05/12/2025 a 15/12/2025",1725.45,""],["000223","15/05/2025 a 05/06/2025",1576.37,""],["000073","05/12/2025 a 15/12/2025",1534.15,""],["000041","15/12/2025 a 15/12/2025",445.50,""],["000163","15/12/2025 a 15/12/2025",270.84,""],["000011","15/09/2025 a 15/12/2025",265.33,""],["000182","15/12/2025 a 15/12/2025",254.20,""],["000033","15/12/2025 a 15/12/2025",229.25,""],["000173","15/11/2025 a 15/11/2025",209.66,""],["000083","15/12/2025 a 15/12/2025",146.07,""],["000012","15/12/2025 a 15/12/2025",137.76,""],["000231","15/12/2025 a 15/12/2025",54.58,""],["000324","15/12/2025 a 15/12/2025",54.58,""]]
-  },
-  "2026-01": {
-    mesLabel:"Janeiro 2026", periodo:"01/01/2026 a 31/01/2026",
-    orcado:{total:205086, pessoal:134370, consumos:25930, contratos:13730, manutencoes:11600, higiene:4600, obrigacoes:3700, gerais:14750, receita:205086},
-    fundos:{
-      "Caixa Ordinário":[-42861.70,226026.08,150279.25],
-      "Uso de Salões/Espaços":[34259.15,2103.00,0],
-      "Melhoramentos":[43356.52,740.01,0],
-      "Fundo de Reserva":[692936.92,15340.70,0],
-      "Pinturas":[0,174.19,0],
-      "Piscina":[102573.97,7396.21,0],
-      "Seguro Proteção Res+":[55.20,1502.25,0]
-    },
-    banco:{cc:320264.00,cdb:146861.01,vipdi:466198.24},
-    receitas:[["Recebimentos do período",173103.56],["Condôminos em atraso recebidos",11380.69],["Cotas antecipadas",17843.02],["Gás (reembolso)",18321.38],["Rendimento de aplicações",1717.76],["Atualização monetária",965.83],["Juros",846.12],["Multas taxa condominial",827.38],["Honorários advogado contratado",783.72],["Aluguel de espaço",125.62],["Controle remoto / TAG",111.00]],
-    despesas:[["Consumos",57314.05],["Serviços contratados",24787.47],["Despesas com pessoal",21986.07],["Encargos sociais",10972.47],["Manut. e conservação eventuais",9173.03],["Compra materiais e equipamento",9129.05],["Manutenção e conservação",4940.40],["Taxa de administração",5752.00],["Seguros",2930.37],["Despesas gerais",2012.18],["Impostos e taxas",1282.16]],
-    inadimplencia:[["000234","05/12/2014 a 15/04/2025",39659.38,"J"],["000314","05/12/2025 a 15/01/2026",5308.02,""],["000073","05/12/2025 a 05/01/2026",4212.67,""],["000081","05/12/2025 a 05/01/2026",4212.67,""],["000031","05/01/2026 a 15/01/2026",4290.44,""],["000324","15/12/2025 a 15/01/2026",4923.43,""],["000231","15/01/2026 a 15/01/2026",2036.22,""],["000202","05/01/2026 a 05/01/2026",1850.20,""],["000014","05/01/2026 a 15/01/2026",1821.67,""],["000033","15/12/2025 a 15/01/2026",1727.85,""],["000254","05/01/2026 a 15/01/2026",1686.45,""],["000174","05/01/2026 a 15/01/2026",1522.91,""],["000223","29/01/2026 a 29/01/2026",650.02,""],["000011","15/09/2025 a 15/01/2026",484.59,"J"],["000061","15/01/2026 a 15/01/2026",321.41,""],["000182","15/01/2026 a 15/01/2026",243.94,""],["000012","15/12/2025 a 15/12/2025",137.76,""],["000271","15/01/2026 a 15/01/2026",54.58,""]]
-  },
-  "2026-02": {
-    mesLabel:"Fevereiro 2026", periodo:"01/02/2026 a 28/02/2026",
-    orcado:{total:205086, pessoal:134370, consumos:25930, contratos:13730, manutencoes:11600, higiene:4600, obrigacoes:3700, gerais:14750, receita:205086},
-    fundos:{
-      "Caixa Ordinário":[32885.13,221871.51,191178.24],
-      "Uso de Salões/Espaços":[36362.15,2258.00,0],
-      "Melhoramentos":[44096.53,680.69,0],
-      "Fundo de Reserva":[708277.62,14618.27,0],
-      "Pinturas":[174.19,175.81,0],
-      "Piscina":[109970.18,6813.65,0],
-      "Seguro Proteção Res+":[1557.45,1528.75,3031.00]
-    },
-    banco:{cc:372056.99,cdb:148325.24,vipdi:470744.46,mov:-4066.00},
-    receitas:[["Recebimentos do período",170961.23],["Condôminos em atraso recebidos",17393.17],["Cotas antecipadas",12714.92],["Gás (reembolso)",14520.52],["Rendimento de aplicações",1515.97],["Juros",1343.09],["Atualização monetária",1147.15],["Honorários advogado contratado",783.83],["Multas taxa condominial",737.02],["Reembolso custas judiciais",655.18],["Aluguel de espaço",99.43]],
-    despesas:[["Serviços contratados",76550.23],["Consumos",45112.94],["Despesas com pessoal",22725.53],["Manut. e conservação eventuais",13392.03],["Encargos sociais",10201.86],["Despesas gerais",5786.27],["Taxa de administração",5752.00],["Compra materiais e equipamento",4171.08],["Manutenção e conservação",3806.69],["Seguros",2930.37],["Impostos e taxas",749.24]],
-    inadimplencia:[["000234","05/11/2014 a 15/04/2025",39659.38,"J"],["000081","05/12/2025 a 05/02/2026",5712.93,""],["000314","05/12/2025 a 15/02/2026",5308.02,""],["000324","15/12/2025 a 15/02/2026",4923.43,""],["000031","05/01/2026 a 15/02/2026",4290.44,""],["000073","05/12/2025 a 05/02/2026",4212.67,""],["000231","15/01/2026 a 15/02/2026",2036.22,""],["000202","05/02/2026 a 05/02/2026",1850.20,""],["000014","05/02/2026 a 15/02/2026",1821.67,""],["000033","15/12/2025 a 15/02/2026",1727.85,""],["000254","05/02/2026 a 15/02/2026",1686.45,""],["000174","05/02/2026 a 15/02/2026",1522.91,""],["000223","29/01/2026 a 29/01/2026",650.02,""],["000011","15/09/2025 a 15/02/2026",484.59,"J"],["000061","15/02/2026 a 15/02/2026",321.41,""],["000182","15/02/2026 a 15/02/2026",243.94,""],["000012","15/12/2025 a 15/12/2025",137.76,""],["000271","15/02/2026 a 15/02/2026",54.58,""]]
-  },
-  "2026-03": {
-    mesLabel:"Março 2026", periodo:"01/03/2026 a 31/03/2026",
-    orcado:{total:205086, pessoal:134370, consumos:25930, contratos:13730, manutencoes:11600, higiene:4600, obrigacoes:3700, gerais:14750, receita:205086},
-    fundos:{
-      "Caixa Ordinário":[63578.40,248265.29,183006.82],
-      "Uso de Salões/Espaços":[38620.15,1762.90,0],
-      "Melhoramentos":[44777.22,119.51,0],
-      "Fundo de Reserva":[722895.89,16827.76,0],
-      "Pinturas":[350.00,177.41,0],
-      "Piscina":[116783.83,7413.68,0],
-      "Seguro Proteção Res+":[55.20,1642.45,1587.25]
-    },
-    banco:{cc:452192.31,cdb:150124.32,vipdi:476358.99},
-    receitas:[["Recebimentos do período",182029.60],["Condôminos em atraso recebidos",21393.24],["Cotas antecipadas",20605.61],["Gás (reembolso)",18479.92],["Rendimento de aplicações",1843.57],["Multas taxa condominial",1071.40],["Atualização monetária",1041.93],["Juros",1038.83],["Honorários advogado contratado",718.99],["Aluguel de espaço",42.20]],
-    despesas:[["Serviços contratados",79599.16],["Despesas com pessoal",26042.40],["Consumos",24246.80],["Manutenção e conservação",16395.91],["Encargos sociais",10836.52],["Manut. e conservação eventuais",8841.67],["Compra materiais e equipamento",6565.29],["Taxa de administração",5752.00],["Seguros",2930.37],["Despesas gerais",1488.42],["Impostos e taxas",308.28]],
-    inadimplencia:[["000234","05/01/2015 a 15/04/2025",37775.67,"J"],["000031","05/01/2026 a 15/03/2026",6568.36,""],["000073","05/12/2025 a 05/03/2026",5579.22,""],["000081","05/12/2025 a 05/02/2026",5242.29,"A"],["000302","05/03/2026 a 15/03/2026",2016.68,""],["000254","05/03/2026 a 15/03/2026",1677.84,""],["000174","05/03/2026 a 15/03/2026",1548.73,""],["000014","15/02/2026 a 05/03/2026",1821.67,""],["000193","05/03/2026 a 05/03/2026",1365.04,""],["000223","29/01/2026 a 29/01/2026",650.02,""],["000011","15/09/2025 a 15/03/2026",484.59,"J"],["000224","15/03/2026 a 15/03/2026",450.52,""],["000164","15/03/2026 a 15/03/2026",243.94,""],["000052","15/03/2026 a 15/03/2026",175.08,""],["000313","15/03/2026 a 15/03/2026",97.62,""],["000271","15/02/2026 a 15/02/2026",54.58,""],["000204","15/03/2026 a 15/03/2026",54.58,""],["000012","15/12/2025 a 15/12/2025",137.76,""]]
-  },
-  "2026-04": {
-    mesLabel:"Abril 2026", periodo:"01/04/2026 a 30/04/2026",
-    orcado:{total:205086, pessoal:134370, consumos:25930, contratos:13730, manutencoes:11600, higiene:4600, obrigacoes:3700, gerais:14750, receita:205086},
-    fundos:{
-      "Caixa Ordinário":[128836.87,213940.04,248124.50],
-      "Uso de Salões/Espaços":[40383.05,1150.00,2932.01],
-      "Melhoramentos":[44896.73,121.68,0],
-      "Fundo de Reserva":[739723.65,14225.83,0],
-      "Pinturas":[527.41,179.03,0],
-      "Piscina":[124197.51,7192.22,0],
-      "Seguro Proteção Res+":[110.40,1307.95,1418.35]
-    },
-    banco:{cc:431174.18,cdb:151762.08,vipdi:481381.25},
-    receitas:[["Recebimentos do período",166637.41],["Condôminos em atraso recebidos",16869.01],["Gás (reembolso)",24828.50],["Rendimento de aplicações",1766.62],["Atualização monetária",1128.51],["Juros",1097.47],["Multas taxa condominial",759.75],["Cotas antecipadas",137.14],["Controle remoto / TAG",74.00],["Aluguel de espaço",42.20],["Honorários advogado contratado",599.43]],
-    despesas:[["Consumos",84894.13],["Serviços contratados",80054.79],["Despesas com pessoal",26731.88],["Manut. e conservação eventuais",14245.12],["Manutenção e conservação",12249.93],["Encargos sociais",9497.47],["Compra materiais e equipamento",6283.26],["Taxa de administração",5751.99],["Despesas gerais",5111.28],["Seguros",2930.31],["Impostos e taxas",374.34]],
-    inadimplencia:[["000234","05/01/2015 a 15/04/2025",35869.98,"J"],["000081","05/12/2025 a 05/04/2026",7095.51,"A"],["000031","05/03/2026 a 15/04/2026",4647.34,""],["000193","05/03/2026 a 15/04/2026",3279.25,""],["000174","05/03/2026 a 15/04/2026",3133.21,""],["000041","05/04/2026 a 15/04/2026",2347.44,""],["000223","29/01/2026 a 05/04/2026",2015.06,""],["000231","05/04/2026 a 15/04/2026",1915.77,""],["000014","05/04/2026 a 05/04/2026",1767.09,""],["000254","05/04/2026 a 15/04/2026",1694.39,""],["000253","05/04/2026 a 15/04/2026",1540.52,""],["000073","05/04/2026 a 05/04/2026",1366.55,""],["000314","05/04/2026 a 05/04/2026",1366.55,""],["000011","15/09/2025 a 15/04/2026",494.12,"J"],["000092","15/04/2026 a 15/04/2026",285.39,""],["000302","15/04/2026 a 15/04/2026",197.46,""],["000111","15/04/2026 a 15/04/2026",142.51,""],["000313","15/04/2026 a 15/04/2026",120.53,""],["000204","15/04/2026 a 15/04/2026",54.58,""]]
-  },
-  /* === PROJECAO ORCAMENTARIA (PO Set/26 a Ago/27) ===
-     Meses futuros: apenas orcado preenchido. Sem realizado.
-     Premissas: MO +6%, beneficios +10%, contratos +6% no aniversario. === */
-  "2026-09":{mesLabel:"Set 2026",periodo:"01/09/2026 a 30/09/2026",projecao:true,
-    orcado:{total:208680,pessoal:134370,consumos:25930,contratos:13730,manutencoes:11600,higiene:4600,obrigacoes:3700,gerais:14750,receita:216188},
-    fundos:{},banco:{cc:0,cdb:0,vipdi:0},receitas:[],despesas:[],inadimplencia:[]},
-  "2026-10":{mesLabel:"Out 2026",periodo:"01/10/2026 a 31/10/2026",projecao:true,
-    orcado:{total:212080,pessoal:134370,consumos:25930,contratos:13910,manutencoes:11600,higiene:4600,obrigacoes:6920,gerais:14750,receita:216188},
-    fundos:{},banco:{cc:0,cdb:0,vipdi:0},receitas:[],despesas:[],inadimplencia:[]},
-  "2026-11":{mesLabel:"Nov 2026",periodo:"01/11/2026 a 30/11/2026",projecao:true,
-    orcado:{total:214705,pessoal:136650,consumos:25930,contratos:13910,manutencoes:11600,higiene:4600,obrigacoes:6920,gerais:15095,receita:216188},
-    fundos:{},banco:{cc:0,cdb:0,vipdi:0},receitas:[],despesas:[],inadimplencia:[]},
-  "2026-12":{mesLabel:"Dez 2026",periodo:"01/12/2026 a 31/12/2026",projecao:true,
-    orcado:{total:214705,pessoal:136650,consumos:25930,contratos:13910,manutencoes:11600,higiene:4600,obrigacoes:6920,gerais:15095,receita:216188},
-    fundos:{},banco:{cc:0,cdb:0,vipdi:0},receitas:[],despesas:[],inadimplencia:[]},
-  "2027-01":{mesLabel:"Jan 2027",periodo:"01/01/2027 a 31/01/2027",projecao:true,
-    orcado:{total:214705,pessoal:136650,consumos:25930,contratos:13910,manutencoes:11600,higiene:4600,obrigacoes:6920,gerais:15095,receita:216188},
-    fundos:{},banco:{cc:0,cdb:0,vipdi:0},receitas:[],despesas:[],inadimplencia:[]},
-  "2027-02":{mesLabel:"Fev 2027",periodo:"01/02/2027 a 28/02/2027",projecao:true,
-    orcado:{total:220555,pessoal:142370,consumos:25930,contratos:14040,manutencoes:11600,higiene:4600,obrigacoes:6920,gerais:15095,receita:216188},
-    fundos:{},banco:{cc:0,cdb:0,vipdi:0},receitas:[],despesas:[],inadimplencia:[]},
-  "2027-03":{mesLabel:"Mar 2027",periodo:"01/03/2027 a 31/03/2027",projecao:true,
-    orcado:{total:220555,pessoal:142370,consumos:25930,contratos:14040,manutencoes:11600,higiene:4600,obrigacoes:6920,gerais:15095,receita:216188},
-    fundos:{},banco:{cc:0,cdb:0,vipdi:0},receitas:[],despesas:[],inadimplencia:[]},
-  "2027-04":{mesLabel:"Abr 2027",periodo:"01/04/2027 a 30/04/2027",projecao:true,
-    orcado:{total:217335,pessoal:142370,consumos:25930,contratos:14040,manutencoes:11600,higiene:4600,obrigacoes:3700,gerais:15095,receita:216188},
-    fundos:{},banco:{cc:0,cdb:0,vipdi:0},receitas:[],despesas:[],inadimplencia:[]},
-  "2027-05":{mesLabel:"Mai 2027",periodo:"01/05/2027 a 31/05/2027",projecao:true,
-    orcado:{total:217735,pessoal:142370,consumos:25930,contratos:14440,manutencoes:11600,higiene:4600,obrigacoes:3700,gerais:15095,receita:216188},
-    fundos:{},banco:{cc:0,cdb:0,vipdi:0},receitas:[],despesas:[],inadimplencia:[]},
-  "2027-06":{mesLabel:"Jun 2027",periodo:"01/06/2027 a 30/06/2027",projecao:true,
-    orcado:{total:217735,pessoal:142370,consumos:25930,contratos:14440,manutencoes:11600,higiene:4600,obrigacoes:3700,gerais:15095,receita:216188},
-    fundos:{},banco:{cc:0,cdb:0,vipdi:0},receitas:[],despesas:[],inadimplencia:[]},
-  "2027-07":{mesLabel:"Jul 2027",periodo:"01/07/2027 a 31/07/2027",projecao:true,
-    orcado:{total:217735,pessoal:142370,consumos:25930,contratos:14440,manutencoes:11600,higiene:4600,obrigacoes:3700,gerais:15095,receita:216188},
-    fundos:{},banco:{cc:0,cdb:0,vipdi:0},receitas:[],despesas:[],inadimplencia:[]},
-  "2027-08":{mesLabel:"Ago 2027",periodo:"01/08/2027 a 31/08/2027",projecao:true,
-    orcado:{total:217735,pessoal:142370,consumos:25930,contratos:14440,manutencoes:11600,higiene:4600,obrigacoes:3700,gerais:15095,receita:216188},
-    fundos:{},banco:{cc:0,cdb:0,vipdi:0},receitas:[],despesas:[],inadimplencia:[]}
-};
+const fmtR = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+const fmtK = v => 'R$ ' + Math.round(v/1000) + 'k';
+const calcSAC = (s,m) => s/m;
 
+function simularAnos(amortExtras) {
+  let saldo = SALDO_ATUAL, meses = PRAZO_ATUAL;
+  const rows = [];
 
+  rows.push({ ano:2025, saldoInicio:633657, amortOrd:13657, juros:42389, seguros:1734,
+    amortExtra:0, saldoFim:616518, parcelaAnual:8300*6, mesesPagos:6,
+    quitado:false, historico:true, parcial:false });
 
-/* ================================================================
-   HELPERS
-================================================================ */
-// Register datalabels plugin only for doughnut charts - will opt-in per chart
-Chart.register(ChartDataLabels);
-
-const BRL = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
-const fmt = v => BRL.format(v||0);
-const fmtK = v => {
-  const a=Math.abs(v);
-  if(a>=1e6) return (v/1e6).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' mi';
-  if(a>=1e3) return (v/1e3).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})+' mil';
-  return v.toLocaleString('pt-BR');
-};
-const pct = (v,t) => t ? v/t*100 : 0;
-const MES_ABBR = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-const curtoFromKey = k => { const[y,m]=k.split('-'); return MES_ABBR[+m-1]+'/'+y.slice(2); };
-
-function computeMonth(key){
-  const m = MESES[key];
-  if(m.projecao){
-    // Projection month — no realizado data
-    return { key, ...m, curto:curtoFromKey(key),
-      fundos:[], patAnt:0, patAtual:0, ord:{ant:0,cred:0,deb:0,atual:0},
-      reservaFdR:0, totRec:0, totDesp:0, resultado:0, totInad:0, bancoTotal:0 };
+  const pago2026 = 8 * 8195; // jan-ago reais (ago projetado)
+  let saldoIni2026 = 616518;
+  let amortOrd2026=0, juros2026=0, amortExtra2026=0;
+  for (let mes=9; mes<=12; mes++) {
+    if (saldo<=0.01) break;
+    const extra = amortExtras.filter(e=>e.ano===2026&&e.mes===mes).reduce((s,e)=>s+e.valor,0);
+    if (extra>0 && extra<=saldo) { const red=Math.round(extra/calcSAC(saldo,meses)); saldo-=extra; meses=Math.max(1,meses-red); amortExtra2026+=extra; }
+    if (saldo<=0.01) break;
+    const am=calcSAC(saldo,meses), ju=saldo*TAXA_MENSAL;
+    if (am>=saldo){ amortOrd2026+=saldo; juros2026+=ju; saldo=0; meses=0; break; }
+    amortOrd2026+=am; juros2026+=ju; saldo-=am; meses=Math.max(1,meses-1);
   }
-  const fundos = Object.entries(m.fundos).map(([nome,[ant,cred,deb]])=>({nome,ant,cred,deb,atual:ant+cred-deb}));
-  const patAnt = fundos.reduce((s,f)=>s+f.ant,0);
-  const patAtual = fundos.reduce((s,f)=>s+f.atual,0);
-  const ord = fundos.find(f=>f.nome==="Caixa Ordinário");
-  const reservaFdR = (fundos.find(f=>f.nome==="Fundo de Reserva")||{atual:0}).atual;
-  const totRec = m.receitas.reduce((s,r)=>s+r[1],0);
-  const totDesp = m.despesas.reduce((s,d)=>s+d[1],0);
-  const totInad = m.inadimplencia.reduce((s,i)=>s+i[2],0);
-  const banco = m.banco.cc + m.banco.cdb + m.banco.vipdi + (m.banco.mov||0);
-  return { key, ...m, curto:curtoFromKey(key), fundos, patAnt, patAtual,
-           ord, reservaFdR, totRec, totDesp, resultado:totRec-totDesp, totInad, bancoTotal:banco };
-}
+  const seg2026 = saldoIni2026*0.00023*12;
+  rows.push({ ano:2026, saldoInicio:saldoIni2026, amortOrd:amortOrd2026, juros:juros2026, seguros:seg2026,
+    amortExtra:amortExtra2026, saldoFim:Math.max(0,saldo),
+    parcelaAnual: pago2026+amortOrd2026+juros2026+seg2026,
+    mesesPagos:12, quitado:saldo<=0.01, historico:false, parcial:true });
+  if (saldo<=0.01) return rows;
 
-const keysSorted = Object.keys(MESES).sort();
-let charts = {};
-let activeKey = keysSorted[keysSorted.length-1];
-
-function killCharts(){ Object.values(charts).forEach(c=>c&&c.destroy()); charts={}; }
-
-/* ─── MODAL SYSTEM ─── */
-let modalChart = null;
-function openModal(html){
-  closeModal();
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.id = 'theModal';
-  overlay.innerHTML = `<div class="modal-box">${html}</div>`;
-  overlay.addEventListener('click', e=>{ if(e.target===overlay) closeModal(); });
-  document.body.appendChild(overlay);
-}
-function closeModal(){
-  if(modalChart){ modalChart.destroy(); modalChart=null; }
-  const el = document.getElementById('theModal');
-  if(el) el.remove();
-}
-
-/* ─── DRILL-DOWN: série mensal de uma métrica ─── */
-function drillModal(title, seriesLabel, valFn, color, fmt2, extraRows){
-  const all = keysSorted.map(computeMonth);
-  const labels = all.map(x=>x.curto);
-  const vals = all.map(valFn);
-  const rows = all.map((d,i)=>{
-    const prev = i>0 ? vals[i-1] : null;
-    const diff = prev!=null ? vals[i]-prev : null;
-    const cls = d.key===activeKey ? 'cur' : '';
-    const arrow = diff==null ? '—' : diff>=0 ? '▲' : '▼';
-    const diffStr = diff==null ? '—' : (diff>=0?'+':'')+fmt2(diff);
-    return `<tr class="${cls}"><td>${d.curto}${d.key===activeKey?' ●':''}</td><td class="r mono">${fmt2(vals[i])}</td><td class="r" style="color:${diff==null?'var(--muted)':diff>=0?'var(--positive)':'var(--alert)'}">${arrow} ${diffStr}</td></tr>`;
-  }).join('');
-  const extraHtml = extraRows ? extraRows(all, vals) : '';
-  openModal(`
-    <div class="modal-header">
-      <div class="modal-title">${title}</div>
-      <button class="modal-close" onclick="closeModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="modal-chart-wrap"><canvas id="modalCanvas"></canvas></div>
-      ${extraHtml}
-      <table class="modal-table">
-        <thead><tr><th>Mês</th><th class="r">Valor</th><th class="r">Variação</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`);
-  requestAnimationFrame(()=>{
-    const ctx = document.getElementById('modalCanvas');
-    if(!ctx) return;
-    modalChart = new Chart(ctx,{
-      type:'line',
-      data:{labels,datasets:[{
-        label:seriesLabel, data:vals,
-        borderColor:color, backgroundColor:color.replace(')',', .12)').replace('rgb(','rgba(').replace('#',null)||color+'26',
-        fill:true, tension:.3, pointRadius:5, pointBackgroundColor:color, borderWidth:2.5
-      }]},
-      options:{
-        plugins:{legend:{display:false},datalabels:{display:false},
-          tooltip:{callbacks:{label:c=>' '+fmt2(c.raw)}}},
-        scales:{
-          y:{ticks:{callback:v=>fmt2(v).replace('R$\u00a0','R$ '),font:{family:'Inter',size:11}},grid:{color:'#eee'}},
-          x:{ticks:{font:{family:'Inter',size:11}},grid:{display:false}}
-        }
-      }
-    });
-  });
-}
-
-
-function buildMonthNav(){
-  const nav = document.getElementById('monthNav');
-  const inner = document.createElement('div');
-  inner.className = 'month-nav-inner';
-
-  const years = {};
-  keysSorted.forEach(k => {
-    const y = k.slice(0,4);
-    if(!years[y]) years[y]=[];
-    years[y].push(k);
-  });
-
-  let first = true;
-  Object.entries(years).forEach(([year, keys])=>{
-    if(!first){ const div=document.createElement('div'); div.className='year-divider'; inner.appendChild(div); }
-    first = false;
-    const lbl = document.createElement('span');
-    lbl.className = 'year-label';
-    // Check if this year has projection months
-    const hasProj = keys.some(k => MESES[k].projecao);
-    lbl.textContent = year + (hasProj ? ' (PO)' : '');
-    inner.appendChild(lbl);
-    keys.forEach(k=>{
-      const chip = document.createElement('button');
-      const isProj = !!MESES[k].projecao;
-      chip.className = 'month-chip' + (k===activeKey?' active':'') + (isProj?' projecao':'');
-      chip.dataset.key = k;
-      chip.textContent = MES_ABBR[+k.slice(5,7)-1];
-      chip.title = MESES[k].mesLabel + (isProj ? ' · Projeção Orçamentária' : '');
-      chip.addEventListener('click', ()=>{ activateMonth(k); });
-      inner.appendChild(chip);
-    });
-  });
-  nav.appendChild(inner);
-}
-
-function activateMonth(key){
-  activeKey = key;
-  document.querySelectorAll('.month-chip').forEach(c=>{
-    c.classList.toggle('active', c.dataset.key===key);
-  });
-  renderAll(key);
-}
-
-/* ─── DELTA CHIP ─── */
-function deltaChip(atual, ant, invertColor){
-  if(ant==null) return '<span class="kpi-delta nt">Primeiro mês</span>';
-  const diff = atual - ant;
-  const p = ant ? diff/ant*100 : 0;
-  const isPositive = invertColor ? diff<=0 : diff>=0;
-  const cls = isPositive ? 'up' : 'dn';
-  const arrow = diff>=0 ? '▲' : '▼';
-  return `<span class="kpi-delta ${cls}">${arrow} ${Math.abs(p).toFixed(1)}%</span>`;
-}
-
-/* ─── SAÚDE FINANCEIRA ─── */
-function calcSaude(d, dp){
-  const items = [];
-
-  // Caixa: verde se positivo, amarelo se entre 0 e 50k, vermelho se negativo
-  const caixaOK = d.ord.atual;
-  const caixaCls = caixaOK > 50000 ? 'verde' : caixaOK > 0 ? 'amarelo' : 'vermelho';
-  const caixaIcon = caixaOK > 50000 ? '🟢' : caixaOK > 0 ? '🟡' : '🔴';
-  items.push({icon:caixaIcon, name:'Caixa', status:caixaCls, label: caixaOK>50000?'Saudável':caixaOK>0?'Atenção':'Negativo'});
-
-  // Resultado: verde se positivo, amarelo se até -20k, vermelho abaixo
-  const resCls = d.resultado >= 0 ? 'verde' : d.resultado >= -30000 ? 'amarelo' : 'vermelho';
-  const resIcon = d.resultado >= 0 ? '🟢' : d.resultado >= -30000 ? '🟡' : '🔴';
-  items.push({icon:resIcon, name:'Resultado', status:resCls, label:d.resultado>=0?'Positivo':d.resultado>=-30000?'Atenção':'Déficit alto'});
-
-  // Reservas: verde se crescendo ou estável, amarelo se caiu
-  const reservaAnterior = dp ? dp.reservaFdR : null;
-  const reservaCls = reservaAnterior==null||d.reservaFdR>=reservaAnterior ? 'verde' : 'amarelo';
-  const reservaIcon = reservaCls==='verde' ? '🟢' : '🟡';
-  items.push({icon:reservaIcon, name:'Reservas', status:reservaCls, label:reservaCls==='verde'?'Crescendo':'Redução'});
-
-  // Inadimplência: verde se caiu vs anterior, amarelo se estável, vermelho se subiu >10%
-  const inadAnterior = dp ? dp.totInad : null;
-  let inadCls='verde', inadIcon='🟢', inadLabel='Reduzindo';
-  if(inadAnterior!=null){
-    const diff = d.totInad - inadAnterior;
-    if(diff > inadAnterior*0.10){ inadCls='vermelho'; inadIcon='🔴'; inadLabel='Em alta'; }
-    else if(diff > 0){ inadCls='amarelo'; inadIcon='🟡'; inadLabel='Leve alta'; }
-    else { inadCls='verde'; inadIcon='🟢'; inadLabel='Reduzindo'; }
-  } else { inadLabel='Sem anterior'; }
-  items.push({icon:inadIcon, name:'Inadimplência', status:inadCls, label:inadLabel});
-
-  return items;
-}
-
-/* ================================================================
-   RENDER: VISÃO GERAL
-================================================================ */
-function renderVisao(d, dp){
-  // Projection months — show only PO summary
-  if(d.projecao){
-    const o = d.orcado;
-    document.getElementById('visao').innerHTML = `
-      <div class="proj-banner"><span>📋</span><div><b>Mês de projeção orçamentária (PO Set/26–Ago/27)</b> · ${d.mesLabel} ainda não tem dados realizados. Exibindo apenas o orçamento previsto.</div></div>
-      <div class="g g4" style="margin-bottom:16px">
-        <div class="card p20"><div class="kpi-label">Despesas orçadas</div><div class="kpi-value" style="color:var(--pine)">${fmt(o.total)}</div><div class="kpi-vs">previsão PO</div></div>
-        <div class="card p20"><div class="kpi-label">Arrecadação proposta</div><div class="kpi-value" style="color:var(--positive)">${fmt(o.receita)}</div><div class="kpi-vs">+5,4% vs atual</div></div>
-        <div class="card p20"><div class="kpi-label">Resultado projetado</div><div class="kpi-value" style="color:${o.receita>=o.total?'var(--positive)':'var(--alert)'}">${o.receita>=o.total?'+':''}${fmt(o.receita-o.total)}</div><div class="kpi-vs">receita − despesas</div></div>
-        <div class="card p20"><div class="kpi-label">Média mensal PO</div><div class="kpi-value" style="color:var(--brass)">${fmt(216188)}</div><div class="kpi-vs">média 12 meses</div></div>
-      </div>
-      <div class="section-head">Composição orçada <span class="rule"></span></div>
-      <div class="card p24">
-        ${[['Pessoal (próprio + terceirizado)',o.pessoal],['Consumos',o.consumos],['Contratos / Manutenção',o.contratos],['Manutenções e reparos',o.manutencoes],['Higiene e limpeza',o.higiene],['Obrigações legais',o.obrigacoes],['Despesas gerais',o.gerais]].map(([n,v])=>`
-          <div class="flow-row"><div class="flow-row-head"><span class="fl-label">${n}</span><span class="fl-val">${fmt(v)}</span></div>
-          <div class="bar-track"><div class="bar-fill bar-green" style="width:${v/o.total*100}%"></div></div></div>`).join('')}
-      </div>`;
-    return;
-  }
-
-  const resNeg = d.resultado < 0;
-  const reservasTot = d.fundos.filter(f=>f.nome!=="Caixa Ordinário").reduce((s,f)=>s+f.atual,0);
-  const saude = calcSaude(d, dp);
-
-  // ── Secondary KPI calculations ──────────────────────────────────
-  const allMonths = keysSorted.map(computeMonth);
-  // Arrecadação média: média de "Recebimentos do período" de todos os meses
-  const arrMensal = allMonths.map(m=>{
-    const r = m.receitas.find(r=>r[0]==="Recebimentos do período");
-    return r ? r[1] : 0;
-  });
-  const arrMedia = arrMensal.reduce((s,v)=>s+v,0) / arrMensal.length;
-
-  // Fundo de Reserva obrigatório = 2x arrecadação média
-  const fdrObrg = arrMedia * 2;
-  const fdrAtual = (d.fundos.find(f=>f.nome==="Fundo de Reserva")||{atual:0}).atual;
-  const fdrPct = fdrAtual / fdrObrg * 100;
-  const fdrOk = fdrAtual >= fdrObrg;
-
-  // Folha média: Despesas com pessoal + Encargos sociais médios
-  const folhaMensal = allMonths.map(m=>{
-    const pessoal = m.despesas.find(d=>d[0]==="Despesas com pessoal");
-    const encargos = m.despesas.find(d=>d[0]==="Encargos sociais");
-    return (pessoal?pessoal[1]:0) + (encargos?encargos[1]:0);
-  });
-  const folhaMedia = folhaMensal.reduce((s,v)=>s+v,0) / folhaMensal.length;
-
-  // Fundo de Obras (Melhoramentos)
-  const fObras = (d.fundos.find(f=>f.nome==="Melhoramentos")||{atual:0}).atual;
-  const fObrasDp = dp ? (dp.fundos.find(f=>f.nome==="Melhoramentos")||{atual:0}).atual : null;
-
-  // Fundo Piscina
-  const fPiscina = (d.fundos.find(f=>f.nome==="Piscina")||{atual:0}).atual;
-  const fPiscinaDp = dp ? (dp.fundos.find(f=>f.nome==="Piscina")||{atual:0}).atual : null;
-
-  const verdictTitle = resNeg
-    ? 'Reservas crescem, caixa operacional com déficit no mês'
-    : 'Resultado positivo e reservas em crescimento';
-  const verdictSub = resNeg
-    ? `O caixa operacional gastou ${fmt(Math.abs(d.resultado))} a mais do que arrecadou. Movimento típico em meses com despesas pontuais. O patrimônio total ficou em ${fmt(d.patAtual)}.`
-    : `O caixa operacional fechou positivo em ${fmt(d.resultado)}. Patrimônio total em ${fmt(d.patAtual)}.`;
-
-  const kpis = [
-    { label:'Patrimônio Total', dot:'var(--pine)', val:d.patAtual, ant:dp?dp.patAtual:null, invert:false,
-      click:()=>drillModal('Patrimônio Total · Histórico','Patrimônio',x=>x.patAtual,'#1f4d3a',fmt) },
-    { label:'Resultado do Mês', dot:resNeg?'var(--alert)':'var(--positive)', val:d.resultado, ant:dp?dp.resultado:null, invert:false,
-      click:()=>drillModal('Resultado Operacional · Histórico','Resultado',x=>x.resultado,'#237a53',v=>(v>=0?'+':'')+fmt(v)) },
-    { label:'Fundos & Reservas', dot:'var(--positive)', val:reservasTot, ant:dp?dp.fundos.filter(f=>f.nome!=="Caixa Ordinário").reduce((s,f)=>s+f.atual,0):null, invert:false,
-      click:()=>drillModal('Fundos & Reservas · Histórico','Total reservas',x=>x.fundos.filter(f=>f.nome!=="Caixa Ordinário").reduce((s,f)=>s+f.atual,0),'#1e7a4a',fmt) },
-    { label:'Inadimplência', dot:'var(--brass)', val:d.totInad, ant:dp?dp.totInad:null, invert:true,
-      click:()=>drillModal('Inadimplência · Histórico','Total em aberto',x=>x.totInad,'#a5771f',fmt) }
-  ];
-
-  document.getElementById('visao').innerHTML = `
-    <div class="verdict">
-      <div class="verdict-eyebrow">Leitura do mês · ${d.mesLabel}</div>
-      <div class="verdict-title">${verdictTitle}</div>
-      <div class="verdict-sub">${verdictSub}</div>
-    </div>
-
-    <div class="g g4" style="margin-bottom:16px">
-      ${kpis.map((k,i)=>`
-        <div class="card p20 kpi-clickable" data-kpi="${i}">
-          <div class="kpi-label"><span class="kpi-dot" style="background:${k.dot}"></span>${k.label}</div>
-          <div class="kpi-value" style="color:${k.dot}">${k.label==='Resultado do Mês'&&k.val>=0?'+':''}${fmt(k.val)}</div>
-          ${deltaChip(k.val, k.ant, k.invert)}
-          <div class="kpi-vs">vs mês anterior</div>
-          <div class="kpi-hint">📈 Ver histórico</div>
-        </div>`).join('')}
-    </div>
-
-    <div class="section-head">Saúde Financeira <span class="rule"></span></div>
-    <div class="g saude-grid" style="margin-bottom:24px">
-      ${saude.map(s=>`
-        <div class="card saude-card">
-          <div class="saude-icon">${s.icon}</div>
-          <div class="saude-info">
-            <div class="saude-name">${s.name}</div>
-            <div class="saude-status ${s.status}">${s.label}</div>
-          </div>
-        </div>`).join('')}
-    </div>
-
-    <div class="section-head">Indicadores de Referência <span class="rule"></span></div>
-    <div class="g g5ref" style="margin-bottom:24px">
-
-      <div class="card p20 kpi-clickable" id="kpiArrMedia"
-           onclick="drillModal('Arrecadação Mensal · Histórico','Recebimentos do período',x=>{const r=x.receitas.find(r=>r[0]==\\'Recebimentos do período\\');return r?r[1]:0;},'#2e6b50',fmt)">
-        <div class="kpi-label"><span class="kpi-dot" style="background:var(--pine-soft)"></span>Arrecadação média</div>
-        <div class="kpi-value" style="color:var(--pine-soft);font-size:clamp(18px,2.5vw,26px)">${fmt(arrMedia)}</div>
-        <div class="kpi-vs">média de ${allMonths.length} meses · mês atual: ${fmt(d.receitas.find(r=>r[0]==='Recebimentos do período')?.[1]||0)}</div>
-        <div class="kpi-hint">📈 Ver histórico</div>
-      </div>
-
-      <div class="card p20" style="border-left:3px solid ${fdrOk?'var(--positive)':'var(--warn)'}">
-        <div class="kpi-label"><span class="kpi-dot" style="background:${fdrOk?'var(--positive)':'var(--warn)'}"></span>FDR Obrigatório (2× arr. média)</div>
-        <div class="kpi-value" style="color:var(--pine);font-size:clamp(18px,2.5vw,26px)">${fmt(fdrObrg)}</div>
-        <div style="margin-top:6px">
-          <div style="height:6px;background:#f0ede4;border-radius:4px;overflow:hidden;margin-bottom:4px">
-            <div style="height:100%;width:${Math.min(fdrPct,100)}%;background:${fdrOk?'var(--positive)':'var(--warn)'};border-radius:4px"></div>
-          </div>
-          <div class="kpi-vs">${fdrOk?'✅':'⚠️'} Saldo atual ${fmt(fdrAtual)} · ${fdrPct.toFixed(0)}% da meta</div>
-        </div>
-      </div>
-
-      <div class="card p20 kpi-clickable" id="kpiFolhaMedia"
-           onclick="drillModal('Folha de Pagamento · Histórico','Pessoal + Encargos',x=>{const p=x.despesas.find(d=>d[0]==\\'Despesas com pessoal\\');const e=x.despesas.find(d=>d[0]==\\'Encargos sociais\\');return (p?p[1]:0)+(e?e[1]:0);},'#a5771f',fmt)">
-        <div class="kpi-label"><span class="kpi-dot" style="background:var(--brass)"></span>Folha média mensal</div>
-        <div class="kpi-value" style="color:var(--brass);font-size:clamp(18px,2.5vw,26px)">${fmt(folhaMedia)}</div>
-        <div class="kpi-vs">pessoal + encargos · média de ${allMonths.length} meses</div>
-        <div class="kpi-hint">📈 Ver histórico</div>
-      </div>
-
-      <div class="card p20 kpi-clickable" id="kpiFObras"
-           onclick="drillModal('Fundo de Obras (Melhoramentos) · Histórico','Saldo',x=>{const f=x.fundos.find(f=>f.nome==\\'Melhoramentos\\');return f?f.atual:null;},'#6e8b7a',fmt)">
-        <div class="kpi-label"><span class="kpi-dot" style="background:var(--sage)"></span>Fundo de Obras</div>
-        <div class="kpi-value" style="color:var(--sage);font-size:clamp(18px,2.5vw,26px)">${fmt(fObras)}</div>
-        ${fObrasDp!=null?`<div class="kpi-vs">${fObras>=fObrasDp?'▲':'▼'} ${fmt(Math.abs(fObras-fObrasDp))} vs mês anterior</div>`:'<div class="kpi-vs">Melhoramentos</div>'}
-        <div class="kpi-hint">📈 Ver histórico</div>
-      </div>
-
-      <div class="card p20 kpi-clickable" id="kpiFPiscina"
-           onclick="drillModal('Fundo Piscina · Histórico','Saldo',x=>{const f=x.fundos.find(f=>f.nome==\\'Piscina\\');return f?f.atual:null;},'#2e6b50',fmt)">
-        <div class="kpi-label"><span class="kpi-dot" style="background:var(--pine-soft)"></span>Fundo Piscina</div>
-        <div class="kpi-value" style="color:var(--pine-soft);font-size:clamp(18px,2.5vw,26px)">${fmt(fPiscina)}</div>
-        ${fPiscinaDp!=null?`<div class="kpi-vs">${fPiscina>=fPiscinaDp?'▲':'▼'} ${fmt(Math.abs(fPiscina-fPiscinaDp))} vs mês anterior</div>`:'<div class="kpi-vs">Reserva piscina</div>'}
-        <div class="kpi-hint">📈 Ver histórico</div>
-      </div>
-
-    </div>
-
-    <div class="section-head">Fluxo do Caixa Operacional <span class="rule"></span></div>
-    <div class="card p24">
-      <div class="flow-row">
-        <div class="flow-row-head">
-          <span class="fl-label">Entradas (arrecadação + reembolsos + rendimentos)</span>
-          <span class="fl-val" style="color:var(--pine-soft)">${fmt(d.totRec)}</span>
-        </div>
-        <div class="bar-track"><div class="bar-fill bar-green" style="width:${d.totRec>=d.totDesp?100:Math.max(4,d.totRec/d.totDesp*100)}%"></div></div>
-      </div>
-      <div class="flow-row">
-        <div class="flow-row-head">
-          <span class="fl-label">Saídas (despesas operacionais do condomínio)</span>
-          <span class="fl-val" style="color:var(--alert)">${fmt(d.totDesp)}</span>
-        </div>
-        <div class="bar-track"><div class="bar-fill bar-red" style="width:${d.totDesp>=d.totRec?100:Math.max(4,d.totDesp/d.totRec*100)}%"></div></div>
-      </div>
-      <div class="flow-result">
-        <span class="flow-result-label">Resultado do mês</span>
-        <span class="flow-result-val" style="color:${resNeg?'var(--alert)':'var(--positive)'}">${d.resultado>=0?'+':''}${fmt(d.resultado)}</span>
-      </div>
-    </div>`;
-  // Wire KPI click handlers
-  kpis.forEach((k,i)=>{
-    const el = document.querySelector(`[data-kpi="${i}"]`);
-    if(el) el.addEventListener('click', k.click);
-  });
-}
-
-/* ================================================================
-   RENDER: DESPESAS
-================================================================ */
-function renderDespesas(d){
-  const o = d.orcado;
-
-  // Projection month: no realizado
-  if(d.projecao){
-    const cats=[['Pessoal (próprio + terc.)',o.pessoal],['Consumos',o.consumos],['Contratos/Manut.',o.contratos],['Manutenções',o.manutencoes],['Higiene',o.higiene],['Obrig. Legais',o.obrigacoes],['Desp. Gerais',o.gerais]];
-    const mx=Math.max(...cats.map(c=>c[1]));
-    document.getElementById('despesas').innerHTML=`
-      <div class="proj-banner"><span>📋</span><div><b>${d.mesLabel} · Projeção</b> · Valores orçados da PO Set/26–Ago/27.</div></div>
-      <div class="card chart-card"><h3>Orçamento por categoria · ${d.mesLabel}</h3><div class="c-sub">Total: ${fmt(o.total)}</div>
-        <ul class="hbar-list">${cats.map(([n,v])=>`<li class="hbar-item"><div class="hbar-head"><span class="hbar-name">${n}</span><div class="hbar-right"><span class="hbar-val">${fmt(v)}</span><span class="hbar-pct">${pct(v,o.total).toFixed(1)}%</span></div></div><div class="hbar-track"><div class="hbar-fill" style="width:${pct(v,mx)}%"></div></div></li>`).join('')}</ul>
-      </div>`;
-    return;
-  }
-
-  // Map dashboard despesas to PO category groups for aderência comparison
-  const catMap=[
-    {label:'Pessoal (próprio + terceirizado)',orc:o.pessoal,
-     real:(d.despesas.find(x=>x[0]==='Despesas com pessoal')?.[1]||0)+(d.despesas.find(x=>x[0]==='Encargos sociais')?.[1]||0)+(d.despesas.find(x=>x[0]==='Serviços contratados')?.[1]||0)},
-    {label:'Consumos',orc:o.consumos,real:d.despesas.find(x=>x[0]==='Consumos')?.[1]||0},
-    {label:'Contratos / Manutenção rotineira',orc:o.contratos,real:d.despesas.find(x=>x[0]==='Manutenção e conservação')?.[1]||0},
-    {label:'Manutenções eventuais + Materiais',orc:o.manutencoes,
-     real:(d.despesas.find(x=>x[0]==='Manut. e conservação eventuais')?.[1]||0)+(d.despesas.find(x=>x[0]==='Compra materiais e equipamento')?.[1]||0)},
-    {label:'Obrig. Legais / Seguros',orc:o.obrigacoes,
-     real:(d.despesas.find(x=>x[0]==='Seguros')?.[1]||0)+(d.despesas.find(x=>x[0]==='Impostos e taxas')?.[1]||0)},
-    {label:'Despesas Gerais + Administração',orc:o.gerais,
-     real:(d.despesas.find(x=>x[0]==='Despesas gerais')?.[1]||0)+(d.despesas.find(x=>x[0]==='Taxa de administração')?.[1]||0)},
-  ];
-
-  const aderTotal=d.totDesp>0?d.totDesp/o.total*100:null;
-  const aderCls=aderTotal==null?'':aderTotal<=100?'ok':aderTotal<=115?'warn':'over';
-
-  const ovrRows=catMap.map(c=>{
-    const diff=c.real-c.orc; const pctR=c.orc>0?c.real/c.orc*100:100; const over=c.real>c.orc;
-    return `<div class="ovr-row">
-      <div class="ovr-head"><span class="ovr-label">${c.label}</span>
-        <div class="ovr-vals"><span class="ovr-orcado">Orç: ${fmt(c.orc)}</span>
-          ${c.real>0?`<span class="ovr-real" style="color:${over?'var(--alert)':'var(--positive)'}">${fmt(c.real)}</span><span class="ovr-diff ${over?'over':'ok'}">${over?'+':''}${fmt(diff)}</span>`:'<span class="ovr-real" style="color:var(--muted)">—</span>'}
-        </div>
-      </div>
-      <div class="ovr-bars">
-        <div class="ovr-bar-wrap"><div class="ovr-bar-label">Orçado</div><div class="ovr-track"><div class="ovr-fill-orc" style="width:100%"></div></div></div>
-        <div class="ovr-bar-wrap"><div class="ovr-bar-label">Realizado</div><div class="ovr-track"><div class="ovr-fill-real ${over?'over':'ok'}" style="width:${Math.min(pctR,150)}%"></div></div></div>
-      </div></div>`;
-  }).join('');
-
-  const sorted=[...d.despesas].sort((a,b)=>b[1]-a[1]);
-  const max=sorted[0][1];
-  const barList=sorted.map(([n,v])=>`<li class="hbar-item"><div class="hbar-head"><span class="hbar-name">${n}</span><div class="hbar-right"><span class="hbar-val">${fmt(v)}</span><span class="hbar-pct">${pct(v,d.totDesp).toFixed(1)}%</span></div></div><div class="hbar-track"><div class="hbar-fill" style="width:${pct(v,max)}%"></div></div></li>`).join('');
-
-  document.getElementById('despesas').innerHTML=`
-    <div class="section-head">Orçado vs Realizado · ${d.mesLabel} <span class="rule"></span></div>
-    <div class="g g2" style="align-items:start;margin-bottom:16px">
-      <div class="card p24">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">
-          <div><h3 style="font-size:14px;font-weight:700">Aderência ao orçamento</h3><div style="font-size:12px;color:var(--muted)">Realizado vs orçado por grupo de despesa</div></div>
-          ${aderTotal!=null?`<div class="ader-pct ${aderCls}">${aderTotal.toFixed(1)}%</div>`:''}
-        </div>
-        ${ovrRows}
-        <div class="flow-result"><span class="flow-result-label">Total orçado</span><span class="flow-result-val" style="color:var(--muted)">${fmt(o.total)}</span></div>
-        <div class="flow-result" style="margin-top:6px;padding-top:6px"><span class="flow-result-label">Total realizado</span><span class="flow-result-val" style="color:${d.totDesp>o.total?'var(--alert)':'var(--positive)'}">${fmt(d.totDesp)}</span></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:10px">⚠ Mapeamento aproximado. "Pessoal" inclui portaria, limpeza e vigilância terceirizadas.</div>
-      </div>
-      <div class="card chart-card">
-        <h3>Detalhamento das despesas realizadas</h3><div class="c-sub">Total ${fmt(d.totDesp)}</div>
-        <ul class="hbar-list">${barList}</ul>
-      </div>
-    </div>
-    <div class="card chart-card">
-      <h3>Concentração · 5 maiores categorias</h3><div class="c-sub">Realizado ${d.mesLabel}</div>
-      <div class="chart-wrap h300"><canvas id="chartDesp"></canvas></div>
-    </div>`;
-
-  const top5=sorted.slice(0,5), resto=sorted.slice(5).reduce((s,x)=>s+x[1],0);
-  charts.desp=new Chart(document.getElementById('chartDesp'),{
-    type:'bar',
-    data:{labels:[...top5.map(x=>x[0].length>22?x[0].slice(0,22)+'…':x[0]),resto>0?'Demais':null].filter(Boolean),
-      datasets:[{data:[...top5.map(x=>x[1]),resto>0?resto:null].filter(Boolean),
-        backgroundColor:['#1f4d3a','#2e6b50','#6e8b7a','#a5771f','#c9a24b','#d8d2c2'],
-        borderRadius:6,barThickness:32}]},
-    options:{indexAxis:'y',plugins:{legend:{display:false},datalabels:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)+' ('+pct(c.raw,d.totDesp).toFixed(1)+'%)'}}},
-      scales:{x:{ticks:{callback:v=>'R$ '+fmtK(v),font:{family:'Inter',size:11}},grid:{color:'#eee'}},
-              y:{ticks:{font:{family:'Inter',size:11}},grid:{display:false}}}}
-  });
-}
-
-/* ================================================================
-   RENDER: FUNDOS & RESERVAS
-================================================================ */
-function renderReservas(d, dp){
-  const fundoGroups = {
-    'Operacional': ['Caixa Ordinário'],
-    'Reserva Obrigatória': ['Fundo de Reserva'],
-    'Reservas Específicas': ['Piscina','Melhoramentos','Pinturas','Uso de Salões/Espaços','Seguro Proteção Res+']
-  };
-
-  const fundoCards = (names) => names.map(nome=>{
-    const f = d.fundos.find(x=>x.nome===nome);
-    if(!f || Math.abs(f.atual)<1) return '';
-    const ant = dp ? (dp.fundos.find(x=>x.nome===nome)||{}).atual : null;
-    let cls='flat', lbl='—';
-    if(ant!=null){
-      const diff=f.atual-ant;
-      if(Math.abs(diff)<1){ cls='flat'; lbl='Estável'; }
-      else if(diff>0){ cls='up'; lbl='▲ '+fmt(diff); }
-      else { cls='dn'; lbl='▼ '+fmt(Math.abs(diff)); }
+  for (let ano=2027; saldo>0.01 && ano<=2060; ano++) {
+    let saldoIni=saldo, aOrd=0, ju=0, aExtra=0, mp=0;
+    for (let mes=1; mes<=12; mes++) {
+      if (saldo<=0.01) break;
+      const extra=amortExtras.filter(e=>e.ano===ano&&e.mes===mes).reduce((s,e)=>s+e.valor,0);
+      if (extra>0 && extra<=saldo){ const red=Math.round(extra/calcSAC(saldo,meses)); saldo-=extra; meses=Math.max(1,meses-red); aExtra+=extra; }
+      if (saldo<=0.01) break;
+      const am=calcSAC(saldo,meses), j=saldo*TAXA_MENSAL;
+      if (am>=saldo){ aOrd+=saldo; ju+=j; mp++; saldo=0; meses=0; break; }
+      aOrd+=am; ju+=j; mp++; saldo-=am; meses=Math.max(1,meses-1);
     }
-    return `<div class="card fund-card kpi-clickable" data-fund="${nome}" title="Ver histórico de ${nome}">
-      <div class="fund-name">${nome}</div>
-      <div class="fund-val">${fmt(f.atual)}</div>
-      <div class="fund-delta ${cls}">${lbl}</div>
-      <div class="kpi-hint">📈 Ver histórico</div>
-    </div>`;
-  }).filter(Boolean).join('');
-
-  const groupsHtml = Object.entries(fundoGroups).map(([label,names])=>{
-    const cards = fundoCards(names);
-    if(!cards) return '';
-    return `<div class="fund-group">
-      <div class="fund-group-label">${label}</div>
-      <div class="g g3">${cards}</div>
-    </div>`;
-  }).join('');
-
-  document.getElementById('reservas').innerHTML = `
-    <div class="g g2" style="align-items:start;margin-bottom:16px">
-      <div class="card chart-card">
-        <h3>Composição do patrimônio</h3>
-        <div class="c-sub">Total ${fmt(d.patAtual)} · participação por fundo</div>
-        <div class="chart-wrap h300"><canvas id="chartFundos"></canvas></div>
-      </div>
-      <div class="card chart-card">
-        <h3>Posição bancária · Itaú Ag. 0024</h3>
-        <div class="c-sub">Como o dinheiro está aplicado</div>
-        <div class="chart-wrap h300"><canvas id="chartBanco"></canvas></div>
-      </div>
-    </div>
-    <div class="section-head">Saldo por fundo <span class="rule"></span></div>
-    ${groupsHtml}`;
-
-  const visiveis = d.fundos.filter(f=>f.atual>1).sort((a,b)=>b.atual-a.atual);
-  charts.fundos = new Chart(document.getElementById('chartFundos'),{
-    type:'doughnut',
-    data:{labels:visiveis.map(f=>f.nome),datasets:[{data:visiveis.map(f=>f.atual),
-      backgroundColor:['#1f4d3a','#2e6b50','#6e8b7a','#a5771f','#c9a24b','#8fae9c','#d8d2c2'],
-      borderWidth:2,borderColor:'#fff'}]},
-    options:{cutout:'52%',plugins:{
-      legend:{position:'bottom',labels:{boxWidth:11,font:{family:'Inter',size:11},padding:10}},
-      tooltip:{callbacks:{label:c=>' '+fmt(c.raw)+' ('+pct(c.raw,d.patAtual).toFixed(1)+'%)'}},
-      datalabels:{
-        color:'#fff', font:{family:'Inter',size:10,weight:'700'},
-        formatter:(v,ctx)=>{
-          const p=pct(v,d.patAtual);
-          return p>=5 ? p.toFixed(0)+'%' : '';
-        },
-        anchor:'center', align:'center', textShadowBlur:4, textShadowColor:'rgba(0,0,0,.4)'
-      }
-    }}
-  });
-
-  const bLabels=['Conta corrente','Aplicação CDB','VIP DI (Reserva)'];
-  const bVals=[d.banco.cc,d.banco.cdb,d.banco.vipdi];
-  const bColors=['#6e8b7a','#2e6b50','#1f4d3a'];
-  if(d.banco.mov){ bLabels.push('Em movimentação'); bVals.push(d.banco.mov); bColors.push('#c9a24b'); }
-  charts.banco = new Chart(document.getElementById('chartBanco'),{
-    type:'bar',
-    data:{labels:bLabels,datasets:[{data:bVals,backgroundColor:bColors,borderRadius:8,barThickness:40}]},
-    options:{plugins:{legend:{display:false},datalabels:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}},
-      scales:{y:{ticks:{callback:v=>'R$ '+fmtK(v),font:{family:'Inter',size:11}},grid:{color:'#eee'}},
-              x:{ticks:{font:{family:'Inter',size:11}},grid:{display:false}}}}
-  });
-
-  // Wire clickable fund cards
-  document.querySelectorAll('[data-fund]').forEach(el=>{
-    el.addEventListener('click', ()=>{
-      const nome = el.dataset.fund;
-      drillModal(
-        nome+' · Histórico mensal', nome,
-        x=>{ const f=x.fundos.find(f=>f.nome===nome); return f?f.atual:null; },
-        '#1f4d3a', fmt
-      );
-    });
-  });
+    const seg=saldoIni*0.00023*mp;
+    rows.push({ ano, saldoInicio:saldoIni, amortOrd:aOrd, juros:ju, seguros:seg, amortExtra:aExtra,
+      saldoFim:Math.max(0,saldo), parcelaAnual:aOrd+ju+seg, mesesPagos:mp,
+      quitado:saldo<=0.01, historico:false, parcial:false });
+    if (saldo<=0.01) break;
+  }
+  return rows;
 }
 
-/* ================================================================
-   RENDER: INADIMPLÊNCIA
-================================================================ */
-function renderInad(d){
-  const sorted = [...d.inadimplencia].sort((a,b)=>b[2]-a[2]);
-  const maior = sorted[0];
-  const jud = sorted.filter(x=>x[3]==='J').reduce((s,x)=>s+x[2],0);
-  const rows = sorted.map(([un,per,val,tp])=>{
-    const tag = tp ? `<span class="badge ${tp}">${tp==='J'?'Judicial':'Acordo'}</span>` : '';
-    return `<tr class="${val>10000?'hot':''}">
-      <td><b>${un}</b>${tag}</td>
-      <td style="color:var(--muted)">${per}</td>
-      <td class="r mono">${fmt(val)}</td>
-    </tr>`;
-  }).join('');
+const totalJuros = rows => rows.filter(r=>!r.historico&&!r.parcial).reduce((s,r)=>s+r.juros,0);
+const anoQuit = rows => { const r=rows.find(r=>r.quitado); return r?r.ano:'—'; };
+const totalAportado = rows => rows.reduce((s,r)=>s+r.amortExtra,0);
 
-  document.getElementById('inad').innerHTML = `
-    <div class="section-head">Inadimplência · ${d.mesLabel} <span class="rule"></span></div>
-    <div class="g g3" style="margin-bottom:16px">
-      <div class="card inad-kpi"><div class="ik-label">Total em aberto</div><div class="ik-val" style="color:var(--brass)">${fmt(d.totInad)}</div></div>
-      <div class="card inad-kpi"><div class="ik-label">Unidades devedoras</div><div class="ik-val">${d.inadimplencia.length}</div></div>
-      <div class="card inad-kpi alert"><div class="ik-label">Concentração maior devedor</div><div class="ik-val">${pct(maior[2],d.totInad).toFixed(0)}%</div></div>
-    </div>
-    <div class="note">
-      <span>⚠️</span>
-      <div>Unidade <b>${maior[0]}</b> (judicial) sozinha responde por <b>${fmt(maior[2])}</b> — ${pct(maior[2],d.totInad).toFixed(0)}% do total em aberto. Casos judiciais somam ${fmt(jud)}.</div>
-    </div>
-    <div class="card chart-card">
-      <table class="inad-table">
-        <thead><tr><th>Unidade</th><th>Período em aberto</th><th class="r">Valor</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`;
-}
+// Cenários
+const CENARIOS = [
+  { id:'sem',  nome:'Sem amortização',                      desc:'segue o contrato original sem aportes',          extras:[] },
+  { id:'c100', nome:'R$ 100k em dez/2026',                  desc:'aporte único de R$ 100.000',                     extras:[{ano:2026,mes:12,valor:100000}] },
+  { id:'c30',  nome:'R$ 30k/jul · 8 anos',                  desc:'8 aportes · total R$ 240.000',                   extras:Array.from({length:8},(_,i)=>({ano:2026+i,mes:7,valor:30000})) },
+  { id:'c300j',nome:'R$ 300k em jan/2030',                  desc:'aporte único, mas só em 2030',                   extras:[{ano:2030,mes:1,valor:300000}] },
+  { id:'c50',  nome:'R$ 50k/jul · 6 anos',                  desc:'6 aportes · total R$ 300.000',                   extras:Array.from({length:6},(_,i)=>({ano:2026+i,mes:7,valor:50000})) },
+  { id:'c300d',nome:'R$ 300k em dez/2026',                  desc:'aporte único, agindo cedo',                      extras:[{ano:2026,mes:12,valor:300000}] },
+  { id:'cmix', nome:'R$ 50k/jul · 6 anos + R$ 100k jul/27', desc:'aportes recorrentes + reforço',                  extras:(()=>{const a=Array.from({length:6},(_,i)=>({ano:2026+i,mes:7,valor:50000}));a.push({ano:2027,mes:7,valor:100000});return a;})() },
+  { id:'c30f', nome:'R$ 30k/jul · todo ano até quitar',     desc:'a partir de 2026, sem parar',                   extras:Array.from({length:40},(_,i)=>({ano:2026+i,mes:7,valor:30000})) },
+  { id:'c30b', nome:'R$ 30k em 2027, retoma em 2029',       desc:'pausa em 2026 e 2028 · 30k/jul até quitar',     extras:[{ano:2027,mes:7,valor:30000},...Array.from({length:35},(_,i)=>({ano:2029+i,mes:7,valor:30000}))] },
+  { id:'c30p', nome:'R$ 30k/jul a partir de 2029',          desc:'começa em 2029 · sem amort antes disso',         extras:Array.from({length:35},(_,i)=>({ano:2029+i,mes:7,valor:30000})) },
+];
 
-/* ================================================================
-   RENDER: EVOLUÇÃO
-================================================================ */
-function renderEvol(key){
-  const all = keysSorted.map(computeMonth);
-  const first = all[0], last = all[all.length-1];
-  const patDiff = last.patAtual - first.patAnt;
-  const patPct = first.patAnt ? patDiff/first.patAnt*100 : 0;
-  const fdrFirst = (first.fundos.find(f=>f.nome==="Fundo de Reserva")||{ant:0}).ant;
-  const fdrDiff = last.reservaFdR - fdrFirst;
-  const resAcum = all.reduce((s,x)=>s+x.resultado,0);
-  const mesesPos = all.filter(x=>x.resultado>=0).length;
-  const labels = all.map(x=>x.curto);
-  const axisY = {ticks:{callback:v=>'R$ '+fmtK(v),font:{family:'Inter',size:11}},grid:{color:'#eee'}};
-  const axisX = {ticks:{font:{family:'Inter',size:11}},grid:{display:false}};
+// Calcular e ordenar (menor juros = melhor)
+const dados = CENARIOS.map(c => {
+  const rows = simularAnos(c.extras);
+  return { ...c, rows, juros: totalJuros(rows), quita: anoQuit(rows), aporte: totalAportado(rows) };
+}).sort((a,b) => a.juros - b.juros);
 
-  document.getElementById('evol').innerHTML = `
-    <div class="section-head">Visão do período · ${first.curto} → ${last.curto} <span class="rule"></span></div>
-    <div class="g evol-strip">
-      <div class="card es">
-        <div class="es-label">Patrimônio no período</div>
-        <div class="es-val" style="color:var(--pine)">${patDiff>=0?'+':''}${fmt(patDiff)}</div>
-        <div class="es-sub ${patDiff>=0?'pos':'neg'}">${patPct>=0?'+':''}${patPct.toFixed(1)}% · ${all.length} meses</div>
-      </div>
-      <div class="card es">
-        <div class="es-label">Fundo de Reserva</div>
-        <div class="es-val" style="color:var(--positive)">${fdrDiff>=0?'+':''}${fmt(fdrDiff)}</div>
-        <div class="es-sub pos">crescimento acumulado</div>
-      </div>
-      <div class="card es">
-        <div class="es-label">Resultado acumulado</div>
-        <div class="es-val" style="color:${resAcum>=0?'var(--positive)':'var(--alert)'}">${resAcum>=0?'+':''}${fmt(resAcum)}</div>
-        <div class="es-sub">${mesesPos} de ${all.length} meses positivos</div>
-      </div>
-      <div class="card es">
-        <div class="es-label">Inadimplência</div>
-        <div class="es-val" style="color:var(--brass)">${fmt(last.totInad)}</div>
-        <div class="es-sub ${last.totInad<=first.totInad?'pos':'neg'}">${last.totInad<=first.totInad?'▼ Reduzindo':'▲ Aumentando'} vs início</div>
-      </div>
-    </div>
+const maxJuros = Math.max(...dados.map(d=>d.juros));
 
-    <div class="section-head">Patrimônio e Fundo de Reserva <span class="rule"></span></div>
-    <div class="card chart-card" style="margin-bottom:20px"><div class="chart-wrap h300"><canvas id="cEvolPat"></canvas></div></div>
-
-    <div class="section-head">Entradas · Saídas · Resultado mensal <span class="rule"></span></div>
-    <div class="card chart-card" style="margin-bottom:20px"><div class="chart-wrap h300"><canvas id="cEvolFluxo"></canvas></div></div>
-
-    <div class="g g2" style="align-items:start">
-      <div>
-        <div class="section-head">Inadimplência total <span class="rule"></span></div>
-        <div class="card chart-card"><div class="chart-wrap h260"><canvas id="cEvolInad"></canvas></div></div>
-      </div>
-      <div>
-        <div class="section-head">Caixa operacional <span class="rule"></span></div>
-        <div class="card chart-card"><div class="chart-wrap h260"><canvas id="cEvolCaixa"></canvas></div></div>
-      </div>
-    </div>
-
-    <div class="section-head" style="margin-top:24px">Evolução dos fundos individuais <span class="rule"></span></div>
-    <div class="g g2">
-      <div class="card chart-card">
-        <h3>Fundo de Reserva</h3>
-        <div class="c-sub">Saldo mês a mês</div>
-        <div class="chart-wrap h260"><canvas id="cEvolFdr"></canvas></div>
-      </div>
-      <div class="card chart-card">
-        <h3>Piscina</h3>
-        <div class="c-sub">Saldo mês a mês</div>
-        <div class="chart-wrap h260"><canvas id="cEvolPisc"></canvas></div>
-      </div>
-      <div class="card chart-card">
-        <h3>Melhoramentos</h3>
-        <div class="c-sub">Saldo mês a mês</div>
-        <div class="chart-wrap h260"><canvas id="cEvolMelh"></canvas></div>
-      </div>
-      <div class="card chart-card">
-        <h3>Uso de Salões / Espaços</h3>
-        <div class="c-sub">Saldo mês a mês</div>
-        <div class="chart-wrap h260"><canvas id="cEvolSal"></canvas></div>
-      </div>
-    </div>`;
-
-  const datalabelsOff = {datalabels:{display:false}};
-
-  const allKeys = keysSorted; // includes projecao months
-  const realKeys = keysSorted.filter(k=>!MESES[k].projecao);
-  const allEvol = allKeys.map(computeMonth);
-  const realEvol = realKeys.map(computeMonth);
-
-  // For evol charts, show real months + projection months side by side
-  const evolLabels = allEvol.map(x=>x.curto);
-  const isProj = allEvol.map(x=>!!x.projecao);
-
-  charts.evolPat = new Chart(document.getElementById('cEvolPat'),{
-    type:'line',data:{labels:realEvol.map(x=>x.curto),datasets:[
-      {label:'Patrimônio total',data:realEvol.map(x=>x.patAtual),borderColor:'#1f4d3a',backgroundColor:'rgba(31,77,58,.1)',fill:true,tension:.3,pointRadius:4,borderWidth:2.5},
-      {label:'Fundo de Reserva',data:realEvol.map(x=>x.reservaFdR),borderColor:'#a5771f',borderDash:[5,4],fill:false,tension:.3,pointRadius:3,borderWidth:2}
-    ]},
-    options:{plugins:{legend:{position:'bottom',labels:{font:{family:'Inter',size:12},boxWidth:12,padding:14}},...datalabelsOff,tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fmt(c.raw)}}},scales:{y:axisY,x:axisX}}
-  });
-
-  charts.evolFluxo = new Chart(document.getElementById('cEvolFluxo'),{
-    data:{labels:evolLabels,datasets:[
-      {type:'bar',label:'Realizado',data:allEvol.map(x=>x.totDesp||null),backgroundColor:allEvol.map(x=>x.projecao?'rgba(200,200,200,.3)':'rgba(192,57,43,.70)'),borderRadius:4},
-      {type:'line',label:'Orçado (PO)',data:allEvol.map(x=>x.orcado?.total||null),borderColor:'#a5771f',borderDash:[6,3],fill:false,tension:.1,pointRadius:3,borderWidth:2.5,pointStyle:'triangle'},
-    ]},
-    options:{plugins:{legend:{position:'bottom',labels:{font:{family:'Inter',size:12},boxWidth:12,padding:14}},...datalabelsOff,tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fmt(c.raw)}}},scales:{y:axisY,x:axisX}}
-  });
-
-  charts.evolInad = new Chart(document.getElementById('cEvolInad'),{
-    type:'line',data:{labels:realEvol.map(x=>x.curto),datasets:[
-      {label:'Total inadimplência',data:realEvol.map(x=>x.totInad),borderColor:'#a5771f',backgroundColor:'rgba(165,119,31,.1)',fill:true,tension:.3,pointRadius:4,borderWidth:2.5},
-      {label:'Unidade 234 (judicial)',data:realEvol.map(x=>{const u=x.inadimplencia.find(i=>i[0]==='000234');return u?u[2]:null;}),borderColor:'#c0392b',borderDash:[5,4],fill:false,tension:.3,pointRadius:3,borderWidth:2}
-    ]},
-    options:{plugins:{legend:{position:'bottom',labels:{font:{family:'Inter',size:11},boxWidth:12,padding:10}},...datalabelsOff,tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fmt(c.raw)}}},scales:{y:axisY,x:axisX}}
-  });
-
-  charts.evolCaixa = new Chart(document.getElementById('cEvolCaixa'),{
-    type:'bar',data:{labels:realEvol.map(x=>x.curto),datasets:[{
-      label:'Saldo Caixa Ordinário',
-      data:realEvol.map(x=>x.ord.atual),
-      backgroundColor:realEvol.map(x=>x.ord.atual>=0?'rgba(30,122,74,.75)':'rgba(192,57,43,.70)'),
-      borderRadius:4
-    }]},
-    options:{plugins:{legend:{display:false},...datalabelsOff,tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}},scales:{y:axisY,x:axisX}}
-  });
-
-  const fundLineOpts=(color)=>({plugins:{legend:{display:false},...datalabelsOff,tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}},scales:{y:axisY,x:axisX}});
-  const makeFundLine=(canvasId,nomeFundo,color)=>{
-    const ctx=document.getElementById(canvasId); if(!ctx) return;
-    charts[canvasId]=new Chart(ctx,{type:'line',
-      data:{labels:realEvol.map(x=>x.curto),datasets:[{label:nomeFundo,
-        data:realEvol.map(x=>{const f=x.fundos.find(f=>f.nome===nomeFundo);return f?f.atual:null;}),
-        borderColor:color,backgroundColor:color+'22',fill:true,tension:.3,pointRadius:4,pointBackgroundColor:color,borderWidth:2.5}]},
-      options:fundLineOpts(color)
-    });
-  };
-  makeFundLine('cEvolFdr','Fundo de Reserva','#1f4d3a');
-  makeFundLine('cEvolPisc','Piscina','#2e6b50');
-  makeFundLine('cEvolMelh','Melhoramentos','#a5771f');
-  makeFundLine('cEvolSal','Uso de Salões/Espaços','#6e8b7a');
-}
-
-/* ================================================================
-   RENDER: ORÇAMENTO (PO Set/26–Ago/27)
-================================================================ */
-function renderOrcamento(){
-  const poKeys=keysSorted.filter(k=>MESES[k].projecao);
-  const realKeys=keysSorted.filter(k=>!MESES[k].projecao);
-  const realMonths=realKeys.map(computeMonth);
-  const poAvg=poKeys.reduce((s,k)=>s+MESES[k].orcado.total,0)/poKeys.length;
-  const poAnnual=poKeys.reduce((s,k)=>s+MESES[k].orcado.total,0);
-  const cats=['pessoal','consumos','contratos','manutencoes','higiene','obrigacoes','gerais'];
-  const catLabels=['Pessoal','Consumos','Contratos','Manutenções','Higiene','Obrig.Legais','Desp.Gerais'];
-
-  const recentReal=realMonths.slice(-6);
-  const aderRows=recentReal.map(d=>{
-    const o=d.orcado; const pctR=d.totDesp/o.total*100; const diff=d.totDesp-o.total;
-    const cls=pctR<=100?'ok':pctR<=115?'warn':'over';
-    return `<tr><td><b>${d.curto}</b></td><td class="r mono">${fmt(o.total)}</td><td class="r mono" style="color:${pctR<=100?'var(--positive)':'var(--alert)'}">${fmt(d.totDesp)}</td><td class="r mono" style="color:${diff<=0?'var(--positive)':'var(--alert)'}">${diff<=0?'':'+'}${fmt(diff)}</td><td class="r"><span class="ader-pct ${cls}" style="font-size:14px">${pctR.toFixed(0)}%</span></td></tr>`;
-  }).join('');
-
-  const poMonthCards=poKeys.map(k=>{
-    const o=MESES[k].orcado;
-    return `<div class="card po-month-card"><div class="po-mc-label">${MESES[k].mesLabel}</div><div class="po-mc-val">${fmt(o.total)}</div><div class="po-mc-sub">Arrecadação: ${fmt(o.receita)}</div><div class="po-mc-sub" style="color:${o.receita>=o.total?'var(--positive)':'var(--alert)'}">Resultado: ${o.receita>=o.total?'+':''}${fmt(o.receita-o.total)}</div><span class="po-mc-badge fut">Projeção</span></div>`;
-  }).join('');
-
-  const realData=keysSorted.map(k=>MESES[k].projecao?null:computeMonth(k).totDesp);
-  const orcData=keysSorted.map(k=>MESES[k].orcado?.total||null);
-
-  document.getElementById('orcamento').innerHTML=`
-    <div class="po-header">
-      <div><div class="po-header-title">Previsão Orçamentária · Set/2026 a Ago/2027</div>
-      <div class="po-header-sub">PO aprovada · Premissas: MO +6%, benefícios +10%, contratos +6% aniversário</div></div>
-      <div class="po-kpis">
-        <div class="po-kpi"><div class="pk-label">Média mensal</div><div class="pk-val">${fmt(poAvg)}</div></div>
-        <div class="po-kpi"><div class="pk-label">Total anual</div><div class="pk-val">R$ ${(poAnnual/1e6).toFixed(2)}M</div></div>
-        <div class="po-kpi"><div class="pk-label">Cota proposta</div><div class="pk-val">${fmt(216188)}</div></div>
-        <div class="po-kpi"><div class="pk-label">Reajuste</div><div class="pk-val">+5,4%</div></div>
-      </div>
-    </div>
-    <div class="section-head">Realizado vs Orçado · histórico + projeção <span class="rule"></span></div>
-    <div class="card chart-card" style="margin-bottom:20px">
-      <div class="chart-wrap h300"><canvas id="cPoEvol"></canvas></div>
-    </div>
-    <div class="section-head">Aderência · últimos 6 meses realizados <span class="rule"></span></div>
-    <div class="card chart-card" style="margin-bottom:20px">
-      <table class="inad-table">
-        <thead><tr><th>Mês</th><th class="r">Orçado</th><th class="r">Realizado</th><th class="r">Variação</th><th class="r">Aderência</th></tr></thead>
-        <tbody>${aderRows}</tbody>
-      </table>
-      <div style="font-size:11px;color:var(--muted);margin-top:12px">✅ ≤100% · 🟡 101–115% · 🔴 >115% · Orçado base R$ 205.086</div>
-    </div>
-    <div class="g g2" style="margin-bottom:20px">
-      <div><div class="section-head">Composição média orçada <span class="rule"></span></div>
-        <div class="card chart-card"><div class="chart-wrap h260"><canvas id="cPoComp"></canvas></div></div>
-      </div>
-      <div><div class="section-head">Detalhamento PO por mês <span class="rule"></span></div>
-        <div class="po-month-grid" style="grid-template-columns:repeat(2,1fr)">${poMonthCards}</div>
-      </div>
-    </div>`;
-
-  requestAnimationFrame(()=>{
-    const dl2={datalabels:{display:false}};
-    const aY={ticks:{callback:v=>'R$ '+fmtK(v),font:{family:'Inter',size:11}},grid:{color:'#eee'}};
-    const aX={ticks:{font:{family:'Inter',size:11}},grid:{display:false}};
-    charts.poEvol=new Chart(document.getElementById('cPoEvol'),{
-      data:{labels:keysSorted.map(curtoFromKey),datasets:[
-        {type:'bar',label:'Realizado',data:realData,backgroundColor:'rgba(192,57,43,.65)',borderRadius:4},
-        {type:'line',label:'Orçado (PO)',data:orcData,borderColor:'#a5771f',borderDash:[6,3],fill:false,tension:.1,pointRadius:3,borderWidth:2.5,pointStyle:'triangle'}
-      ]},
-      options:{plugins:{legend:{position:'bottom',labels:{font:{family:'Inter',size:12},boxWidth:12,padding:14}},...dl2,tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fmt(c.raw)}}},scales:{y:aY,x:aX}}
-    });
-    const avgCats=cats.map((c,i)=>({label:catLabels[i],val:poKeys.reduce((s,k)=>s+MESES[k].orcado[c],0)/poKeys.length}));
-    charts.poComp=new Chart(document.getElementById('cPoComp'),{
-      type:'doughnut',
-      data:{labels:avgCats.map(c=>c.label),datasets:[{data:avgCats.map(c=>c.val),backgroundColor:['#1f4d3a','#2e6b50','#6e8b7a','#a5771f','#c9a24b','#8fae9c','#d8d2c2'],borderWidth:2,borderColor:'#fff'}]},
-      options:{cutout:'52%',plugins:{legend:{position:'bottom',labels:{boxWidth:11,font:{family:'Inter',size:11},padding:10}},
-        tooltip:{callbacks:{label:c=>' '+fmt(c.raw)+' ('+pct(c.raw,poAvg).toFixed(1)+'%)'}},
-        datalabels:{color:'#fff',font:{family:'Inter',size:10,weight:'700'},formatter:(v,ctx)=>{const p=pct(v,poAvg);return p>=5?p.toFixed(0)+'%':'';},anchor:'center',align:'center',textShadowBlur:4,textShadowColor:'rgba(0,0,0,.4)'}}}
-    });
-  });
-}
-
-/* ================================================================
-   RENDER: INSIGHTS
-================================================================ */
-function renderInsights(d, dp){
-  const all = keysSorted.map(computeMonth);
-  const items = [];
-
-  // Patrimônio
-  if(dp){
-    const diff = d.patAtual - dp.patAtual;
-    const p = dp.patAtual ? diff/dp.patAtual*100 : 0;
-    const ok = diff >= 0;
-    items.push({section:'Patrimônio', icon:ok?'✅':'⚠️', cls:ok?'pos':'warn',
-      title:`Patrimônio ${ok?'cresceu':'recuou'} ${Math.abs(p).toFixed(1)}% no mês`,
-      sub:`${fmt(dp.patAtual)} → ${fmt(d.patAtual)} · variação de ${ok?'+':''}${fmt(diff)}`});
-  }
-
-  // Resultado
-  const resOk = d.resultado >= 0;
-  items.push({section:'Resultado', icon:resOk?'✅':'⚠️',
-    title:`Resultado do mês: ${resOk?'+':''}${fmt(d.resultado)}`,
-    sub:resOk?`Entradas superaram saídas em ${fmt(d.resultado)}`:`Saídas superaram entradas em ${fmt(Math.abs(d.resultado))}`});
-
-  // Fundo de Reserva
-  const fdr = d.fundos.find(f=>f.nome==="Fundo de Reserva");
-  const fdrAnt = dp ? (dp.fundos.find(f=>f.nome==="Fundo de Reserva")||{}).atual : null;
-  if(fdr && fdrAnt!=null){
-    const diff = fdr.atual - fdrAnt;
-    items.push({section:'Reservas', icon: diff>=0?'✅':'⚠️',
-      title:`Fundo de Reserva ${diff>=0?'cresceu':'recuou'} ${fmt(Math.abs(diff))}`,
-      sub:`Saldo atual: ${fmt(fdr.atual)}`});
-  }
-
-  // Inadimplência
-  if(dp){
-    const diff = d.totInad - dp.totInad;
-    const ok = diff <= 0;
-    items.push({section:'Inadimplência', icon:ok?'✅':'⚠️',
-      title:`Inadimplência ${ok?'reduziu':'aumentou'} ${fmt(Math.abs(diff))}`,
-      sub:`${fmt(dp.totInad)} → ${fmt(d.totInad)} · ${d.inadimplencia.length} unidades em aberto`});
-  }
-
-  // Maior despesa
-  const topDesp = [...d.despesas].sort((a,b)=>b[1]-a[1])[0];
-  if(topDesp){
-    items.push({section:'Despesas', icon:'ℹ️',
-      title:`Maior categoria: ${topDesp[0]}`,
-      sub:`${fmt(topDesp[1])} · ${pct(topDesp[1],d.totDesp).toFixed(1)}% do total de despesas`});
-  }
-
-  // Variação de despesas vs mês anterior
-  if(dp){
-    const diff = d.totDesp - dp.totDesp;
-    const p = dp.totDesp ? diff/dp.totDesp*100 : 0;
-    const ok = diff <= 0;
-    items.push({section:'Despesas', icon:ok?'✅':'⚠️',
-      title:`Despesas ${ok?'reduziram':'aumentaram'} ${Math.abs(p).toFixed(1)}% vs mês anterior`,
-      sub:`${fmt(dp.totDesp)} → ${fmt(d.totDesp)}`});
-  }
-
-  // Evolução do patrimônio no período completo
-  const first = all[0];
-  const patTotal = d.patAtual - first.patAnt;
-  const patPct = first.patAnt ? patTotal/first.patAnt*100 : 0;
-  items.push({section:'Período', icon:'📈',
-    title:`Patrimônio acumulou ${patTotal>=0?'+':''}${fmt(patTotal)} desde ${first.curto}`,
-    sub:`${fmt(first.patAnt)} → ${fmt(d.patAtual)} · alta de ${patPct.toFixed(0)}%`});
-
-  // Inadimplência no período
-  const inadFirst = first.totInad;
-  const inadDiff = d.totInad - inadFirst;
-  const inadOk = inadDiff <= 0;
-  items.push({section:'Período', icon:inadOk?'✅':'⚠️',
-    title:`Inadimplência ${inadOk?'caiu':'subiu'} ${fmt(Math.abs(inadDiff))} desde ${first.curto}`,
-    sub:`${fmt(inadFirst)} → ${fmt(d.totInad)}`});
-
-  // Group by section
-  const sections = {};
-  items.forEach(i=>{ if(!sections[i.section]) sections[i.section]=[]; sections[i.section].push(i); });
-
-  const secIcons = {Patrimônio:'💰',Resultado:'📊',Reservas:'🏦',Inadimplência:'⚠',Despesas:'💸',Período:'📅'};
-  const html = Object.entries(sections).map(([sec, its])=>`
-    <div class="insight-section">
-      <div class="insight-section-head">${secIcons[sec]||'•'} ${sec}</div>
-      ${its.map(i=>`
-        <div class="insight-item">
-          <div class="insight-icon">${i.icon}</div>
-          <div class="insight-body">
-            <div class="insight-title">${i.title}</div>
-            ${i.sub?`<div class="insight-sub">${i.sub}</div>`:''}
-          </div>
-        </div>`).join('')}
-    </div>`).join('');
-
-  document.getElementById('insights').innerHTML = `
-    <div class="section-head">Resumo executivo · ${d.mesLabel} <span class="rule"></span></div>
-    <div class="card">${html}</div>`;
-}
-
-/* ================================================================
-   MASTER RENDER
-================================================================ */
-function renderAll(key){
-  killCharts();
-  const d = computeMonth(key);
-  const prev = keysSorted[keysSorted.indexOf(key)-1];
-  const dp = prev ? computeMonth(prev) : null;
-  renderVisao(d, dp);
-  renderDespesas(d);
-  if(!d.projecao){ renderReservas(d, dp); renderInad(d); }
-  else {
-    document.getElementById('reservas').innerHTML='<div class="proj-banner" style="margin-top:8px"><span>📋</span><div>Mês de projeção — dados de fundos e inadimplência não disponíveis.</div></div>';
-    document.getElementById('inad').innerHTML='<div class="proj-banner" style="margin-top:8px"><span>📋</span><div>Mês de projeção — dados de inadimplência não disponíveis.</div></div>';
-  }
-  renderEvol(key);
-  renderInsights(d, dp);
-  renderOrcamento();
-}
-
-/* ================================================================
-   INIT
-================================================================ */
-buildMonthNav();
-
-document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
-
-document.getElementById('tabs').addEventListener('click', e=>{
-  const btn = e.target.closest('.tab'); if(!btn) return;
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById(btn.dataset.tab).classList.add('active');
+// Render ranking
+const rankList = document.getElementById('rankList');
+dados.forEach((d, i) => {
+  const pct = Math.round((d.juros / maxJuros) * 100);
+  const row = document.createElement('div');
+  row.className = 'rank-row' + (i===0 ? ' best' : '');
+  row.innerHTML = `
+    <div class="rank-pos">${String(i+1).padStart(2,'0')}</div>
+    <div class="rank-name">${d.nome}<small>${d.desc}</small></div>
+    <div class="rank-metric"><div class="mv juros num">${fmtK(d.juros)}</div><div class="ml">juros totais</div></div>
+    <div class="rank-metric"><div class="mv quita num">${d.quita}</div><div class="ml">quitação</div></div>
+    <div class="rank-metric"><div class="mv aporte num">${d.aporte>0?fmtK(d.aporte):'—'}</div><div class="ml">aportado</div></div>
+    <div class="rank-bar"><i style="width:${pct}%"></i></div>
+  `;
+  row.onclick = () => openDetail(d.id);
+  rankList.appendChild(row);
 });
 
-renderAll(activeKey);
+// Detail drawer
+const detailEl = document.getElementById('detail');
+let openId = null;
+
+function openDetail(id) {
+  if (openId === id) { detailEl.classList.remove('open'); openId = null; return; }
+  const d = dados.find(x => x.id === id);
+  openId = id;
+
+  let tb = '';
+  for (const r of d.rows) {
+    const cls = r.quitado ? 'r-quit' : r.historico ? 'r-hist' : r.parcial ? 'r-parcial' : r.amortExtra>0 ? 'r-amort' : '';
+    const media = r.mesesPagos>0 ? r.parcelaAnual/r.mesesPagos : 0;
+    const chip = r.historico ? '<span class="chip real">REAL</span>' : r.parcial ? '<span class="chip part">PARCIAL</span>' : '';
+    const extraCell = r.amortExtra>0 ? `<td class="cell-extra">${fmtR(r.amortExtra)}</td>` : `<td class="cell-faint">—</td>`;
+    const saldoCell = r.saldoFim<1 ? `<td><span class="badge-quit">✓ QUITADO</span></td>` : `<td>${fmtR(r.saldoFim)}</td>`;
+    tb += `<tr class="${cls}">
+      <td>${r.ano}${chip}</td>
+      <td>${fmtR(r.saldoInicio)}</td>
+      <td>${fmtR(r.parcelaAnual)}</td>
+      <td>${fmtR(media)}</td>
+      <td>${fmtR(r.amortOrd)}</td>
+      <td>${fmtR(r.juros)}</td>
+      ${extraCell}
+      ${saldoCell}
+    </tr>`;
+  }
+
+  detailEl.innerHTML = `
+    <div class="detail-head">
+      <h3>${d.nome}<span class="tag">${d.aporte>0?fmtK(d.aporte)+' aportado':'sem aporte'}</span></h3>
+      <div class="detail-kpis">
+        <div class="dk"><div class="v accent num">${fmtK(d.juros)}</div><div class="l">juros totais</div></div>
+        <div class="dk"><div class="v cyan num">${d.quita}</div><div class="l">quitação</div></div>
+      </div>
+      <button class="detail-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="tbl-scroll"><table>
+      <thead><tr>
+        <th>Ano</th><th>Saldo início</th><th>Parcela anual</th><th>Parc. méd/mês</th>
+        <th>Amort. ord.</th><th>Juros</th><th>Amort. extra</th><th>Saldo fim</th>
+      </tr></thead>
+      <tbody>${tb}</tbody>
+    </table></div>
+    <div class="detail-note">★ 2025: real — 6 parcelas jul–dez · R$ 8.300/mês&nbsp;&nbsp;·&nbsp;&nbsp;◑ 2026: real jan–ago (R$ 8.195/mês, ago projetado) + projeção set–dez&nbsp;&nbsp;·&nbsp;&nbsp;TR = 0%</div>
+  `;
+  detailEl.classList.add('open');
+  detailEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+function closeDetail() { detailEl.classList.remove('open'); openId = null; }
 </script>
 </body>
 </html>
