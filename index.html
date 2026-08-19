@@ -401,8 +401,8 @@
   <div class="snapshot">
     <div class="snap">
       <div class="snap-label">Saldo devedor</div>
-      <div class="snap-value num">R$ 614k</div>
-      <div class="snap-sub">posição em 18/08/2026</div>
+      <div class="snap-value num">R$ 606k</div>
+      <div class="snap-sub">posição em 19/08/2026</div>
     </div>
     <div class="snap">
       <div class="snap-label">Parcelas a vencer</div>
@@ -473,13 +473,13 @@
 <footer>
   <div class="wrap footer-inner">
     <span><strong>Simulação informativa.</strong> TR projetada = 0% · SAC · amortização reduz prazo</span>
-    <span>Saldo base R$ 613.808 · 18/08/2026 (ago projetado)</span>
+    <span>Saldo base R$ 606.108 · 19/08/2026</span>
   </div>
 </footer>
 
 <script>
 const TAXA_MENSAL = 0.009327;
-const SALDO_ATUAL = 613808.37;
+const SALDO_ATUAL = 606107.75;
 const PRAZO_ATUAL = 305;
 
 const fmtR = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
@@ -494,7 +494,7 @@ function simularAnos(amortExtras) {
     amortExtra:0, saldoFim:616518, parcelaAnual:8300*6, mesesPagos:6,
     quitado:false, historico:true, parcial:false });
 
-  const pago2026 = 8 * 8195; // jan-ago reais (ago projetado)
+  const pago2026 = 8 * 8192; // jan-ago reais
   let saldoIni2026 = 616518;
   let amortOrd2026=0, juros2026=0, amortExtra2026=0;
   for (let mes=9; mes<=12; mes++) {
@@ -622,7 +622,7 @@ function openDetail(id) {
       </tr></thead>
       <tbody>${tb}</tbody>
     </table></div>
-    <div class="detail-note">★ 2025: real — 6 parcelas jul–dez · R$ 8.300/mês&nbsp;&nbsp;·&nbsp;&nbsp;◑ 2026: real jan–ago (R$ 8.195/mês, ago projetado) + projeção set–dez&nbsp;&nbsp;·&nbsp;&nbsp;TR = 0%</div>
+    <div class="detail-note">★ 2025: real — 6 parcelas jul–dez · R$ 8.300/mês&nbsp;&nbsp;·&nbsp;&nbsp;◑ 2026: real jan–ago (R$ 8.192/mês) + projeção set–dez&nbsp;&nbsp;·&nbsp;&nbsp;TR = 0%</div>
   `;
   detailEl.classList.add('open');
   detailEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
